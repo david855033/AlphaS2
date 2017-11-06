@@ -11,6 +11,8 @@ namespace AlphaS2
     {
         static void Main(string[] args)
         {
+            Sql sql = new Sql();
+            sql.CreateTable("testTable1", new SqlField[5]);
         }
     }
 }
