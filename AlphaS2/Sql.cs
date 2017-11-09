@@ -81,6 +81,23 @@ namespace AlphaS2
                 Console.WriteLine(e.ToString());
             }
         }
+        public void DropPrimaryKey(string table, string column) {
+            try {
+                string commandStr = $@"IF COL_LENGTH('{table}', '{column}') IS NOT NULL
+                    BEGIN ALTER TABLE {table} ADD PRIMARY KEY({column});
+                    PRINT 'SUCCESS'
+                    END ELSE PRINT 'FAIL'";
+                SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.ExecuteNonQuery();
+                if (infoMessage == "SUCCESS") {
+                    Console.WriteLine($"SQL: Set Primary Key, table: {table}, Column: {column}");
+                } else {
+                    Console.WriteLine($"SQL: {table}-{column} not exists");
+                }
+            } catch (Exception e) {
+                Console.WriteLine(e.ToString());
+            }
+        }
         public void SetConstraintPrimaryKey(string table, string[] columns) {
 
         }
