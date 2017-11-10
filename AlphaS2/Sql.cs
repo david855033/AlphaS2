@@ -81,26 +81,36 @@ namespace AlphaS2
                 Console.WriteLine(e.ToString());
             }
         }
-        public void DropPrimaryKey(string table, string column) {
+        public void SetConstraintPrimaryKey(string table, string[] columns) {
             try {
-                string commandStr = $@"IF COL_LENGTH('{table}', '{column}') IS NOT NULL
-                    BEGIN ALTER TABLE {table} ADD PRIMARY KEY({column});
-                    PRINT 'SUCCESS'
-                    END ELSE PRINT 'FAIL'";
+                string commandStr = $@"ALTER TABLE {table}
+                    ADD CONSTRAINT PK_{String.Join("_", columns)} PRIMARY KEY ({String.Join(",", columns)});";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
                 sqlCommand.ExecuteNonQuery();
-                if (infoMessage == "SUCCESS") {
-                    Console.WriteLine($"SQL: Set Primary Key, table: {table}, Column: {column}");
-                } else {
-                    Console.WriteLine($"SQL: {table}-{column} not exists");
-                }
+                 Console.WriteLine($"SQL: Set Constraint Primary Key, table: {table}, columns: {String.Join(",", columns)}");
+            } catch (Exception e) {
+                Console.WriteLine($"SQL: Fail to Set Constraint Primary Key, table: {table}, columns: {String.Join(",", columns)}");
+                Console.WriteLine(e.ToString());
+            }
+        }
+        public void DropPrimaryKey(string table) {
+            try {
+                string commandStr = $@"DECLARE @table NVARCHAR(512), @sql NVARCHAR(MAX);
+                    SELECT @table = N'dbo.{table}';
+                    SELECT @sql = 'ALTER TABLE ' + @table 
+                    + ' DROP CONSTRAINT ' + name + ';'
+                    FROM sys.key_constraints
+                    WHERE [type] = 'PK'
+                    AND [parent_object_id] = OBJECT_ID(@table);
+                    EXEC sp_executeSQL @sql;";
+                SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.ExecuteNonQuery();
+                Console.WriteLine($"SQL: Drop Primary Key,table: {table}");
             } catch (Exception e) {
                 Console.WriteLine(e.ToString());
             }
         }
-        public void SetConstraintPrimaryKey(string table, string[] columns) {
 
-        }
         public void AddColumn(string table, SqlColumn column) {
             try {
                 string commandStr = $@"IF COL_LENGTH('{table}', '{column.name}') IS NULL
@@ -137,7 +147,7 @@ namespace AlphaS2
             }
         }
 
-        public void Insert(string table, SqlInsertData insertData) {
+        public void InsertRow(string table, SqlInsertData insertData) {
             try {
                 string commandStr = insertData.GetInserQuery(table);
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
@@ -155,7 +165,19 @@ namespace AlphaS2
                 Console.WriteLine(e.ToString());
             }
         }
-       
+
+        public void UpdateRow(string table, Dictionary<string,string> setKeyValue, Dictionary<string,string> whereKeyValue ) {
+            try {
+                string commandStr = $@"";
+                SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.ExecuteNonQuery();
+               
+                Console.WriteLine($"SQL: Update Row, table: {table}"); 
+            } catch (Exception e) {
+                Console.WriteLine(e.ToString());
+            }
+        }
+
     }
 
     class SqlColumn

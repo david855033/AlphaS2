@@ -25,7 +25,9 @@ namespace AlphaS2
                 insertData.AddData(new Object[] { 1, 2, "s" });
                 insertData.AddData(new Object[] { 3, 4, 3 });
                 insertData.AddData(new Object[] { 5, 3, "你好" });
-                sql.Insert("testTable1", insertData);
+                sql.InsertRow("testTable1", insertData);
+                sql.SetConstraintPrimaryKey("testTable1", new[] { "f1","f2" });
+                sql.DropPrimaryKey("testTable1");
                 Console.ReadKey(false);
             }
         }
