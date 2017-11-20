@@ -28,6 +28,7 @@ namespace AlphaS2
                 sql.InsertRow("testTable1", insertData);
                 //sql.SetConstraintPrimaryKey("testTable1", new[] { "f1","f2" });
                 //sql.DropPrimaryKey("testTable1");
+                sql.update
                 Console.ReadKey(false);
             }
         }
