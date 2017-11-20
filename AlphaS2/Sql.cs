@@ -64,6 +64,7 @@ namespace AlphaS2
                 Console.WriteLine(e.ToString());
             }
         }
+        //設定主鍵
         public void SetPrimaryKey(string table, string column) {
             try {
                 string commandStr = $@"IF COL_LENGTH('{table}', '{column}') IS NOT NULL
@@ -81,6 +82,7 @@ namespace AlphaS2
                 Console.WriteLine(e.ToString());
             }
         }
+        //設定複合式主鍵
         public void SetConstraintPrimaryKey(string table, string[] columns) {
             try {
                 string commandStr = $@"ALTER TABLE {table}
@@ -93,6 +95,7 @@ namespace AlphaS2
                 Console.WriteLine(e.ToString());
             }
         }
+        //移除主鍵
         public void DropPrimaryKey(string table) {
             try {
                 string commandStr = $@"DECLARE @table NVARCHAR(512), @sql NVARCHAR(MAX);
@@ -110,7 +113,7 @@ namespace AlphaS2
                 Console.WriteLine(e.ToString());
             }
         }
-
+        //新增欄位
         public void AddColumn(string table, SqlColumn column) {
             try {
                 string commandStr = $@"IF COL_LENGTH('{table}', '{column.name}') IS NULL
@@ -128,7 +131,7 @@ namespace AlphaS2
                 Console.WriteLine(e.ToString());
             }
         }
-
+        //刪除欄位
         public void DropColumn(string table, string column) {
             try {
                 string commandStr = $@"IF COL_LENGTH('{table}', '{column}') IS NOT NULL
@@ -146,7 +149,7 @@ namespace AlphaS2
                 Console.WriteLine(e.ToString());
             }
         }
-
+        //新增資料
         public void InsertRow(string table, SqlInsertData insertData) {
             try {
                 string commandStr = insertData.GetInserQuery(table);
@@ -166,13 +169,26 @@ namespace AlphaS2
             }
         }
 
-        public void UpdateRow(string table, Dictionary<string,string> setKeyValue, Dictionary<string,string> whereKeyValue ) {
+        public void UpdateRow(string table, Dictionary<string,string> setKeyValue, List<string> condition ) {
+            try {
+                string commandStr = $@"update table {table}
+                        set {String.Join(",",setKeyValue.Keys.Select(x=>x+"="+setKeyValue[x]))}
+                        where {String.Join(" and ",condition)}";
+                SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.ExecuteNonQuery();
+                Console.WriteLine($"SQL: Update Row, table: {table}"); 
+            } catch (Exception e) {
+                Console.WriteLine(e.ToString());
+            }
+        }
+
+        public void DeleteRow(string table, List<string> condition) {
             try {
                 string commandStr = $@"";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
                 sqlCommand.ExecuteNonQuery();
-               
-                Console.WriteLine($"SQL: Update Row, table: {table}"); 
+
+                Console.WriteLine($"SQL: Delete Row, table: {table}");
             } catch (Exception e) {
                 Console.WriteLine(e.ToString());
             }
