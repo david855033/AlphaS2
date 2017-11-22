@@ -169,9 +169,9 @@ namespace AlphaS2
             }
         }
 
-        public void UpdateRow(string table, Dictionary<string,string> setKeyValue, List<string> condition ) {
+        public void UpdateRow(string table, Dictionary<string,string> setKeyValue, string[] condition ) {
             try {
-                string commandStr = $@"update table {table}
+                string commandStr = $@"update {table}
                         set {String.Join(",",setKeyValue.Keys.Select(x=>x+"="+setKeyValue[x]))}
                         where {String.Join(" and ",condition)}";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
@@ -182,9 +182,10 @@ namespace AlphaS2
             }
         }
 
-        public void DeleteRow(string table, List<string> condition) {
+        public void DeleteRow(string table, string[] condition) {
             try {
-                string commandStr = $@"";
+                string commandStr = $@"DELETE FROM {table}
+                    WHERE {String.Join(" and ", condition)};";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
                 sqlCommand.ExecuteNonQuery();
 
