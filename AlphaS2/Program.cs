@@ -11,6 +11,7 @@ namespace AlphaS2
     {
         static void Main(string[] args) {
             using (Sql sql = new Sql()) {
+                StockManager.DropAllList();
                 StockManager.Initialize();
 
                 //sql.DropTable("testTable1");
@@ -34,7 +35,7 @@ namespace AlphaS2
                 //setValues.Add("f2", "22222");
                 //sql.UpdateRow("testTable1", setValues, new string[] { "f1=5" });
                 //sql.DeleteRow("testTable1", new string[] { "f1=3" });
-                //Console.ReadKey(false);
+                Console.ReadKey(false);
             }
         }
     }

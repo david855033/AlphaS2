@@ -83,10 +83,10 @@ namespace AlphaS2
             }
         }
         //設定複合式主鍵
-        public void SetConstraintPrimaryKey(string table, string[] columns) {
+        public void SetPrimaryKeys(string table, string[] columns) {
             try {
                 string commandStr = $@"ALTER TABLE {table}
-                    ADD CONSTRAINT PK_{String.Join("_", columns)} PRIMARY KEY ({String.Join(",", columns)});";
+                    ADD CONSTRAINT PK_{table}_{String.Join("_", columns)} PRIMARY KEY ({String.Join(",", columns)});";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
                 sqlCommand.ExecuteNonQuery();
                  Console.WriteLine($"SQL: Set Constraint Primary Key, table: {table}, columns: {String.Join(",", columns)}");
@@ -109,6 +109,39 @@ namespace AlphaS2
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
                 sqlCommand.ExecuteNonQuery();
                 Console.WriteLine($"SQL: Drop Primary Key,table: {table}");
+            } catch (Exception e) {
+                Console.WriteLine(e.ToString());
+            }
+        }
+        //設定外來鍵
+        public void SetForeignKey(string table, string column, string refTable, string refColumn) {
+            try {
+                string commandStr = $@"IF COL_LENGTH('{table}', '{column}') IS NOT NULL
+                    BEGIN ALTER TABLE {table} ADD FOREIGN KEY({column}) REFERENCES {refTable}({refColumn});
+                    PRINT 'SUCCESS'
+                    END ELSE PRINT 'FAIL'";
+                SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.ExecuteNonQuery();
+                if (infoMessage == "SUCCESS") {
+                    Console.WriteLine($"SQL: Set Foreign Key, table: {table}, Column: {column}");
+                } else {
+                    Console.WriteLine($"SQL: {table}-{column} not exists");
+                }
+            } catch (Exception e) {
+                Console.WriteLine(e.ToString());
+            }
+        }
+        //設定外來鍵
+        public void SetForeignKeys(string table, string[] columns, string refTable, string[] refColumns) {
+            try {
+                string commandStr = $@"ALTER TABLE {table} ADD FOREIGN KEY({String.Join(",", columns)}) REFERENCES {refTable}({String.Join(",", refColumns)});";
+                SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.ExecuteNonQuery();
+                if (infoMessage == "SUCCESS") {
+                    Console.WriteLine($"SQL: Set Foreign Key, table: {table}, Column: {String.Join(",",columns)}");
+                } else {
+                    Console.WriteLine($"SQL: {table} not exists");
+                }
             } catch (Exception e) {
                 Console.WriteLine(e.ToString());
             }
