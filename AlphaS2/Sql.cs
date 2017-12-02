@@ -10,7 +10,7 @@ namespace AlphaS2
     class Sql : IDisposable
     {
         SqlConnection connection;
-        const string connectionStr = @"Server=localhost\SQLEXPRESS;database=alphas2;Trusted_Connection=true;";
+        string connectionStr = @"Server=localhost\SQLEXPRESS;database=alphas2;Trusted_Connection=true;";
         public Sql() {
             CreateConnection();
         }
