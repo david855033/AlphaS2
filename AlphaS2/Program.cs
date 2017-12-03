@@ -13,7 +13,7 @@ namespace AlphaS2
             using (Sql sql = new Sql()) {
                 StockManager.DropAllList();
                 StockManager.Initialize();
-
+                Downloader.LoadDate(new DateTime(2005,1,1));
                 //sql.DropTable("testTable1");
                 //sql.CreateTable("testTable1", new SqlColumn[] {
                 //    new SqlColumn("f1","int",false),

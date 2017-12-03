@@ -189,7 +189,7 @@ namespace AlphaS2
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
                 insertData.AddCmdParameters(sqlCommand);
                 var ColumnList = insertData.ColumnList;
-                var dataList = insertData.dataList;
+                var dataList = insertData.DataList;
                 foreach (var row in dataList) {
                     for (int i = 0; i < ColumnList.Count; i++) {
                         sqlCommand.Parameters["@" + ColumnList[i].name].Value = row[i];
@@ -250,7 +250,7 @@ namespace AlphaS2
     class SqlInsertData
     {
         public List<SqlColumn> ColumnList = new List<SqlColumn>();
-        public List<object[]> dataList = new List<object[]>();
+        public List<object[]> DataList = new List<object[]>();
         public void AddColumn(string name, SqlDbType sqlDbType) {
             ColumnList.Add(new SqlColumn(name, sqlDbType));
         }
@@ -264,7 +264,7 @@ namespace AlphaS2
             }
         }
         public void AddData(object[] add) {
-            dataList.Add(add);
+            DataList.Add(add);
         }
     }
 }

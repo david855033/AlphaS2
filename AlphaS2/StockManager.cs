@@ -13,6 +13,9 @@ namespace AlphaS2
         static int[] DAYS_MACD = new int[] { 10, 20, 40, 60 };
         static int[] DAYS_KD = new int[] { 5, 10, 20, 40, 60 };
         static int[] DAYS_RSI = new int[] { 10, 20, 60 };
+        static int[] DAYS_DMI = new int[] { 10, 20, 60 };
+        static int[] DAYS_FP = new int[] { 5, 10, 20, 30, 40, 50, 60, 70, 80 };
+        static int[] DAYS_FR = new int[] { 20, 40, 60 };
 
         public static void Initialize() {
             InitializeStockList();
@@ -21,6 +24,8 @@ namespace AlphaS2
             InitializeLevel2();
             InitializeLevel3();
             InitializeLevel4();
+            InitializeLevel5();
+            LoadStockList();
         }
 
         static void InitializeStockList() {
@@ -35,6 +40,19 @@ namespace AlphaS2
                 sql.SetPrimaryKey("stock_list", "id");
             }
         }
+
+        static void LoadStockList() {
+            using (Sql sql = new Sql()) {
+                var inserData = new SqlInsertData();
+                inserData.AddColumn("id", System.Data.SqlDbType.NChar);
+                inserData.AddColumn("name", System.Data.SqlDbType.NChar);
+                inserData.AddColumn("type", System.Data.SqlDbType.Char);
+                inserData.AddData(new object[] { "0050", "台灣50", "A" });
+                inserData.AddData(new object[] { "1101", "台泥", "A" });
+                sql.InsertRow("stock_list", inserData);
+            }
+        }
+
 
         static void InitializeFetchLog() {
             using (Sql sql = new Sql()) {
@@ -108,13 +126,24 @@ namespace AlphaS2
                     }
                 }
 
-                //max min極大極小值
+                //max min極大極小值 for KDJ
                 foreach (var c in new string[] { "price" }) {
                     foreach (var d in DAYS_KD) {
                         newColumns.Add(new SqlColumn($@"max_{c}_{d}", "decimal(9,2)", false));
                         newColumns.Add(new SqlColumn($@"min_{c}_{d}", "decimal(9,2)", false));
                     }
                 }
+
+                //DMI
+                //posdm = 今日最高-昨日最高(只取正值)
+                //negdm = 昨日最低-今日最低(只取正值)
+                //tr = max(H - L, H-C(t-1), L-C(t-1))
+                foreach (var c in new string[] { "posdm", "negdm", "tr" }) {
+                    foreach (var d in DAYS_DMI) {
+                        newColumns.Add(new SqlColumn($@"{c}_{d}", "decimal(9,2)", false));
+                    }
+                }
+
                 sql.CreateTable("level3", newColumns);
                 sql.SetPrimaryKeys("level3", new string[] { "id", "date" });
             }
@@ -165,13 +194,49 @@ namespace AlphaS2
                         newColumns.Add(new SqlColumn($@"rsi_ba_{d1}_{d2}", "decimal(9,2)", false));
                     }
                 }
+                //DMI
+                //posDI = posdm / tr
+                //negDI = negdm / tr
+                //dx = ABS((posDI-negDI)/(posDI+negDI))
+                //adx = ema(dx)
+                //adxr = ema(adx)
+                foreach (var c in new string[] { "posdi", "negdi", "dx", "adx", "adxr" }) {
+                    foreach (var d in DAYS_DMI) {
+                        newColumns.Add(new SqlColumn($@"{c}_{d}", "decimal(9,2)", false));
+                    }
+                }
+                //W%R = Hn-Cn / Hn - Ln
+                foreach (var c in new string[] { "wr" }) {
+                    foreach (var d in DAYS_KD) {
+                        newColumns.Add(new SqlColumn($@"{c}_{d}", "decimal(9,2)", false));
+                    }
+                }
 
                 sql.CreateTable("level4", newColumns);
                 sql.SetPrimaryKeys("level4", new string[] { "id", "date" });
             }
         }
 
+        //level 5 = future price
+        static void InitializeLevel5() {
+            using (Sql sql = new Sql()) {
+                var newColumns = new List<SqlColumn>() {
+                    new SqlColumn("id","nchar(10)",false),
+                    new SqlColumn("date","date",false)
+                };
+                foreach (var d in DAYS_FP) {
+                    newColumns.Add(new SqlColumn($@"future_price_{d}", "decimal(9,2)", false));
+                }
+                foreach (var d in DAYS_FR) {
+                    newColumns.Add(new SqlColumn($@"future_rank_{d}", "decimal(9,2)", false));
+                }
+                sql.CreateTable("level5", newColumns);
+                sql.SetPrimaryKeys("level5", new string[] { "id", "date" });
+            }
+        }
+
         public static void DropAllList() {
+            DropLevel5();
             DropLevel4();
             DropLevel3();
             DropLevel2();
@@ -208,6 +273,11 @@ namespace AlphaS2
         static void DropLevel4() {
             using (Sql sql = new Sql()) {
                 sql.DropTable("level4");
+            }
+        }
+        static void DropLevel5() {
+            using (Sql sql = new Sql()) {
+                sql.DropTable("level5");
             }
         }
     }
