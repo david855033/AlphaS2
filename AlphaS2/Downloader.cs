@@ -10,21 +10,25 @@ namespace AlphaS2
 {
     static class Downloader
     {
-        static DateTime startdate = new DateTime(2005, 1, 1);
+        public static string LoadDate(DateTime thisDate) {
+            var url = $@"http://www.twse.com.tw/exchangeReport/MI_INDEX?response=csv&date={thisDate.ToString("yyyyMMdd")}&type=ALL";
 
-        public static void LoadDate(DateTime thisDate) {
-            HttpWebRequest req = (HttpWebRequest)HttpWebRequest.Create($@"http://www.twse.com.tw/exchangeReport/MI_INDEX?response=csv&date=20040401&type=ALL");
+            HttpWebRequest req = (HttpWebRequest)HttpWebRequest.Create(url);
             req.Method = "GET";
+            string responseString = "";
             using (WebResponse response = req.GetResponse()) {
+                Console.WriteLine($"fetching {url} ...");
 
                 var receiveStream= response.GetResponseStream();
                 StreamReader readStream = new StreamReader(receiveStream, Encoding.Default);
 
                 Console.WriteLine("Response stream received.");
-                Console.WriteLine(readStream.ReadToEnd());
+                responseString = readStream.ReadToEnd();
+
                 response.Close();
                 readStream.Close();
             }
+            return responseString;
         }
     }
 }

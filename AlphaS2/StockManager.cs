@@ -58,6 +58,7 @@ namespace AlphaS2
             using (Sql sql = new Sql()) {
                 sql.CreateTable("fetch_log", new SqlColumn[] {
                     new SqlColumn("type","char(1)",false),
+                    new SqlColumn("date","datetime",false),
                     new SqlColumn("fetch_date","datetime",false),
                     new SqlColumn("empty","bit",false),
                     new SqlColumn("uploaded","bit",false)
