@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace AlphaS2
 {
-    static class StockManager
-    {
-
+    static class StockManager {
         static int[] DAYS = new int[] { 3, 5, 10, 15, 20, 30, 40, 50, 60 };
         static int[] DAYS_MACD = new int[] { 10, 20, 40, 60 };
         static int[] DAYS_KD = new int[] { 5, 10, 20, 40, 60 };
@@ -16,7 +15,13 @@ namespace AlphaS2
         static int[] DAYS_DMI = new int[] { 10, 20, 60 };
         static int[] DAYS_FP = new int[] { 5, 10, 20, 30, 40, 50, 60, 70, 80 };
         static int[] DAYS_FR = new int[] { 20, 40, 60 };
-
+        public static List<SqlColumn> FETCH_LOG_COLUMN = new List<SqlColumn> {
+                    new SqlColumn("type","char(1)",false),
+                    new SqlColumn("date","date",false),
+                    new SqlColumn("fetch_datetime","smalldatetime",false),
+                    new SqlColumn("empty","bit",false),
+                    new SqlColumn("uploaded","bit",false)
+                };
         public static void Initialize() {
             InitializeStockList();
             InitializeFetchLog();
@@ -27,7 +32,6 @@ namespace AlphaS2
             InitializeLevel5();
             LoadStockList();
         }
-
         static void InitializeStockList() {
             using (Sql sql = new Sql()) {
                 sql.CreateTable("stock_list", new SqlColumn[] {
@@ -40,7 +44,6 @@ namespace AlphaS2
                 sql.SetPrimaryKey("stock_list", "id");
             }
         }
-
         static void LoadStockList() {
             using (Sql sql = new Sql()) {
                 var inserData = new SqlInsertData();
@@ -52,20 +55,29 @@ namespace AlphaS2
                 sql.InsertRow("stock_list", inserData);
             }
         }
-
-
         static void InitializeFetchLog() {
             using (Sql sql = new Sql()) {
-                sql.CreateTable("fetch_log", new SqlColumn[] {
-                    new SqlColumn("type","char(1)",false),
-                    new SqlColumn("date","datetime",false),
-                    new SqlColumn("fetch_date","datetime",false),
-                    new SqlColumn("empty","bit",false),
-                    new SqlColumn("uploaded","bit",false)
-                });
-                sql.SetPrimaryKeys("fetch_log", new string[] { "type", "fetch_date" });
+                sql.CreateTable("fetch_log", FETCH_LOG_COLUMN);
+                sql.SetPrimaryKeys("fetch_log", new string[] { "type", "date" });
             }
         }
+        public static List<FetchLog> GetFetchLog() {
+            var resultList = new List<FetchLog>();
+            using (Sql sql= new Sql()) {
+                var dataTable = sql.Select("fetch_log", FETCH_LOG_COLUMN.Select(x => x.name).ToArray());
+                foreach (DataRow row in dataTable.Rows) {
+                    resultList.Add(new FetchLog() {
+                        type = Convert.ToChar(row["type"]),
+                        date = (DateTime)row["date"],
+                        fetch_datetime = (DateTime)row["fetch_datetime"],
+                        empty = (bool)row["empty"],
+                        uploaded = (bool)row["uploaded"]
+                    });
+                }
+            }
+            return resultList;
+        }
+
         //level 1為原始資料
         static void InitializeLevel1() {
             using (Sql sql = new Sql()) {
@@ -149,7 +161,6 @@ namespace AlphaS2
                 sql.SetPrimaryKeys("level3", new string[] { "id", "date" });
             }
         }
-
         //level4 為進入計算的資料
         static void InitializeLevel4() {
             using (Sql sql = new Sql()) {
@@ -217,8 +228,7 @@ namespace AlphaS2
                 sql.SetPrimaryKeys("level4", new string[] { "id", "date" });
             }
         }
-
-        //level 5 = future price
+        //level 5 = Future Price
         static void InitializeLevel5() {
             using (Sql sql = new Sql()) {
                 var newColumns = new List<SqlColumn>() {
@@ -270,7 +280,6 @@ namespace AlphaS2
                 sql.DropTable("level3");
             }
         }
-
         static void DropLevel4() {
             using (Sql sql = new Sql()) {
                 sql.DropTable("level4");
@@ -282,4 +291,13 @@ namespace AlphaS2
             }
         }
     }
+}
+
+class FetchLog
+{
+    public char type;
+    public DateTime date;
+    public DateTime fetch_datetime;
+    public bool empty;
+    public bool uploaded;
 }

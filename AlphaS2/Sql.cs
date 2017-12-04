@@ -7,8 +7,7 @@ using System.Data.SqlClient;
 using System.Data;
 namespace AlphaS2
 {
-    class Sql : IDisposable
-    {
+    class Sql : IDisposable {
         SqlConnection connection;
         string connectionStr = @"Server=localhost\SQLEXPRESS;database=alphas2;Trusted_Connection=true;";
         public Sql() {
@@ -89,7 +88,7 @@ namespace AlphaS2
                     ADD CONSTRAINT PK_{table}_{String.Join("_", columns)} PRIMARY KEY ({String.Join(",", columns)});";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
                 sqlCommand.ExecuteNonQuery();
-                 Console.WriteLine($"SQL: Set Constraint Primary Key, table: {table}, columns: {String.Join(",", columns)}");
+                Console.WriteLine($"SQL: Set Constraint Primary Key, table: {table}, columns: {String.Join(",", columns)}");
             } catch (Exception e) {
                 Console.WriteLine($"SQL: Fail to Set Constraint Primary Key, table: {table}, columns: {String.Join(",", columns)}");
                 Console.WriteLine(e.ToString());
@@ -138,7 +137,7 @@ namespace AlphaS2
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
                 sqlCommand.ExecuteNonQuery();
                 if (infoMessage == "SUCCESS") {
-                    Console.WriteLine($"SQL: Set Foreign Key, table: {table}, Column: {String.Join(",",columns)}");
+                    Console.WriteLine($"SQL: Set Foreign Key, table: {table}, Column: {String.Join(",", columns)}");
                 } else {
                     Console.WriteLine($"SQL: {table} not exists");
                 }
@@ -193,6 +192,11 @@ namespace AlphaS2
                 foreach (var row in dataList) {
                     for (int i = 0; i < ColumnList.Count; i++) {
                         sqlCommand.Parameters["@" + ColumnList[i].name].Value = row[i];
+                        sqlCommand.Parameters["@" + ColumnList[i].name].DbType =
+                            row[i].GetType() == typeof(DateTime) ? DbType.Date :
+                            row[i].GetType() == typeof(Int64) ? DbType.Int64 :
+                            row[i].GetType() == typeof(Int32) ? DbType.Int32 :
+                            DbType.String;
                     }
                     int affectedRow = sqlCommand.ExecuteNonQuery();
                     Console.WriteLine($"SQL: Insert, ({affectedRow})");
@@ -201,20 +205,20 @@ namespace AlphaS2
                 Console.WriteLine(e.ToString());
             }
         }
-
-        public void UpdateRow(string table, Dictionary<string,string> setKeyValue, string[] condition ) {
+        //新增列
+        public void UpdateRow(string table, Dictionary<string, string> setKeyValue, string[] condition) {
             try {
                 string commandStr = $@"update {table}
-                        set {String.Join(",",setKeyValue.Keys.Select(x=>x+"="+setKeyValue[x]))}
-                        where {String.Join(" and ",condition)}";
+                        set {String.Join(",", setKeyValue.Keys.Select(x => x + "=" + setKeyValue[x]))}
+                        where {String.Join(" and ", condition)}";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
                 sqlCommand.ExecuteNonQuery();
-                Console.WriteLine($"SQL: Update Row, table: {table}"); 
+                Console.WriteLine($"SQL: Update Row, table: {table}");
             } catch (Exception e) {
                 Console.WriteLine(e.ToString());
             }
         }
-
+        //刪除列
         public void DeleteRow(string table, string[] condition) {
             try {
                 string commandStr = $@"DELETE FROM {table}
@@ -225,6 +229,28 @@ namespace AlphaS2
                 Console.WriteLine($"SQL: Delete Row, table: {table}");
             } catch (Exception e) {
                 Console.WriteLine(e.ToString());
+            }
+        }
+
+        //select
+        public DataTable Select(string table, string[] column) {
+            var emptyStringArray = new string[] { };
+            return Select( table,  column, emptyStringArray);
+        }
+        public DataTable Select(string table, string[] column, string[] condition) {
+            try {
+                string commandStr = $@"select {string.Join(",", column)} FROM {table}" +
+                    (condition.Length > 0 ?
+                        $@"WHERE {String.Join(" and ", condition)};" : "");
+                SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                DataTable dataTable = new DataTable();
+                SqlDataAdapter dataAdapter = new SqlDataAdapter(sqlCommand);
+                dataAdapter.Fill(dataTable);
+                Console.WriteLine($"SQL: Select, table: {table}");
+                return dataTable;
+            } catch (Exception e) {
+                Console.WriteLine(e.ToString());
+                return new DataTable();
             }
         }
 

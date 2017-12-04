@@ -10,17 +10,28 @@ namespace AlphaS2
     class Program
     {
         static readonly DateTime START_DATE = new DateTime(2005, 1, 3);
-
+        
         static void Main(string[] args) {
             using (Sql sql = new Sql()) {
-                //StockManager.DropAllList();
-                //StockManager.Initialize();
+                StockManager.DropAllList();
+                StockManager.Initialize();
+
+                sql.InsertRow("fetch_log", new SqlInsertData() {
+                    ColumnList = StockManager.FETCH_LOG_COLUMN,
+                    DataList = new List<object[]>() {
+                        new object[]{ 'A', new DateTime(2005,1,3), new DateTime(2005,1,3),true,false}
+                    }
+                });
+
+
 
                 FileWriter.CheckDirectory();
-                var thisDate = new DateTime(2005, 1, 3);
-                var response = Downloader.LoadDate(thisDate);
-                FileWriter.WriteToFile(thisDate.ToString("yyyyMMdd"),response);
+                List<FetchLog> fetchLog = StockManager.GetFetchLog();
 
+                //var thisDate = new DateTime(2005, 1, 3);
+                //var response = Downloader.LoadDate(thisDate);
+                //FileWriter.WriteToFile(thisDate.ToString("yyyyMMdd"),response);
+                
                 
                 Console.ReadKey(false);
             }
