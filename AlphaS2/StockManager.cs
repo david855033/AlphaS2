@@ -15,16 +15,9 @@ namespace AlphaS2
         static int[] DAYS_DMI = new int[] { 10, 20, 60 };
         static int[] DAYS_FP = new int[] { 5, 10, 20, 30, 40, 50, 60, 70, 80 };
         static int[] DAYS_FR = new int[] { 20, 40, 60 };
-        public static List<SqlColumn> FETCH_LOG_COLUMN = new List<SqlColumn> {
-                    new SqlColumn("type","char(1)",false),
-                    new SqlColumn("date","date",false),
-                    new SqlColumn("fetch_datetime","smalldatetime",false),
-                    new SqlColumn("empty","bit",false),
-                    new SqlColumn("uploaded","bit",false)
-                };
+      
         public static void Initialize() {
             InitializeStockList();
-            InitializeFetchLog();
             InitializeLevel1();
             InitializeLevel2();
             InitializeLevel3();
@@ -55,28 +48,7 @@ namespace AlphaS2
                 sql.InsertRow("stock_list", inserData);
             }
         }
-        static void InitializeFetchLog() {
-            using (Sql sql = new Sql()) {
-                sql.CreateTable("fetch_log", FETCH_LOG_COLUMN);
-                sql.SetPrimaryKeys("fetch_log", new string[] { "type", "date" });
-            }
-        }
-        public static List<FetchLog> GetFetchLog() {
-            var resultList = new List<FetchLog>();
-            using (Sql sql= new Sql()) {
-                var dataTable = sql.Select("fetch_log", FETCH_LOG_COLUMN.Select(x => x.name).ToArray());
-                foreach (DataRow row in dataTable.Rows) {
-                    resultList.Add(new FetchLog() {
-                        type = Convert.ToChar(row["type"]),
-                        date = (DateTime)row["date"],
-                        fetch_datetime = (DateTime)row["fetch_datetime"],
-                        empty = (bool)row["empty"],
-                        uploaded = (bool)row["uploaded"]
-                    });
-                }
-            }
-            return resultList;
-        }
+      
 
         //level 1為原始資料
         static void InitializeLevel1() {
@@ -252,7 +224,6 @@ namespace AlphaS2
             DropLevel3();
             DropLevel2();
             DropLevel1();
-            DropFetchLog();
             DropStockList();
         }
         static void DropStockList() {
@@ -260,11 +231,7 @@ namespace AlphaS2
                 sql.DropTable("stock_list");
             }
         }
-        static void DropFetchLog() {
-            using (Sql sql = new Sql()) {
-                sql.DropTable("fetch_log");
-            }
-        }
+       
         static void DropLevel1() {
             using (Sql sql = new Sql()) {
                 sql.DropTable("level1");

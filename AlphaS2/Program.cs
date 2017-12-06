@@ -9,30 +9,25 @@ namespace AlphaS2
 {
     class Program
     {
-        static readonly DateTime START_DATE = new DateTime(2005, 1, 3);
-        
+
+
         static void Main(string[] args) {
             using (Sql sql = new Sql()) {
-                StockManager.DropAllList();
-                StockManager.Initialize();
+                
+                FileWriter.CheckDirectory();
 
-                sql.InsertRow("fetch_log", new SqlInsertData() {
-                    ColumnList = StockManager.FETCH_LOG_COLUMN,
-                    DataList = new List<object[]>() {
-                        new object[]{ 'A', new DateTime(2005,1,3), new DateTime(2005,1,3),true,false}
-                    }
+                FetchLogManager.InitializeFetchLog();
+                List<DateTime> downloadDatesA = FetchLogManager.GetDownloadDates('A');
+                List<DateTime> downloadDatesB = FetchLogManager.GetDownloadDates('B');
+                Task.WaitAll(new[] {
+                    Task.Factory.StartNew(() =>  Downloader.LoadDates(downloadDatesA, 'A', 2000)),
+                    Task.Factory.StartNew(() =>  Downloader.LoadDates(downloadDatesA, 'B', 2000))
                 });
 
 
+                StockManager.DropAllList();
+                StockManager.Initialize();
 
-                FileWriter.CheckDirectory();
-                List<FetchLog> fetchLog = StockManager.GetFetchLog();
-
-                //var thisDate = new DateTime(2005, 1, 3);
-                //var response = Downloader.LoadDate(thisDate);
-                //FileWriter.WriteToFile(thisDate.ToString("yyyyMMdd"),response);
-                
-                
                 Console.ReadKey(false);
             }
         }

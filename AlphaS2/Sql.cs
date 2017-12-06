@@ -241,8 +241,9 @@ namespace AlphaS2
             try {
                 string commandStr = $@"select {string.Join(",", column)} FROM {table}" +
                     (condition.Length > 0 ?
-                        $@"WHERE {String.Join(" and ", condition)};" : "");
+                        $@" WHERE {String.Join(" and ", condition)};" : "");
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                Console.WriteLine(commandStr);
                 DataTable dataTable = new DataTable();
                 SqlDataAdapter dataAdapter = new SqlDataAdapter(sqlCommand);
                 dataAdapter.Fill(dataTable);
