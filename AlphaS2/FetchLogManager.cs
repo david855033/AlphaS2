@@ -24,10 +24,15 @@ namespace AlphaS2
                 sql.SetPrimaryKeys("fetch_log", new string[] { "type", "date" });
             }
         }
+        //fetch log adapter
         public static List<FetchLog> GetFetchLog() {
+            return GetFetchLog(new string[] { });
+        }
+        public static List<FetchLog> GetFetchLog(string[] conditions) {
             var resultList = new List<FetchLog>();
             using (Sql sql = new Sql()) {
-                var dataTable = sql.Select("fetch_log", FETCH_LOG_COLUMN.Select(x => x.name).ToArray());
+                var dataTable = sql.Select("fetch_log", FETCH_LOG_COLUMN.Select(x => x.name).ToArray(),
+                    conditions);
                 foreach (DataRow row in dataTable.Rows) {
                     resultList.Add(new FetchLog() {
                         type = Convert.ToChar(row["type"]),
@@ -40,7 +45,13 @@ namespace AlphaS2
             }
             return resultList;
         }
+        public static List<FetchLog> GetFileListToUpload() {
+            var result = GetFetchLog(new[] { "uploaded = 0", "empty = 0" });
+            Console.WriteLine($@"get {result.Count} file(s) need to upload to level 1...");
+            return result;
+        }
 
+        //傳回START DATE 與 END DATE內沒有資料的日期
         public static List<DateTime> GetDownloadDates(char type) {
             return GetDownloadDates(GetFetchLog(), type);
         }

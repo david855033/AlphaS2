@@ -16,7 +16,8 @@ namespace AlphaS2
                 
                 FileWriter.CheckDirectory();
 
-                FetchLogManager.InitializeFetchLog();
+                //FetchLogManager.InitializeFetchLog();
+
                 List<DateTime> downloadDatesA = FetchLogManager.GetDownloadDates('A');
                 List<DateTime> downloadDatesB = FetchLogManager.GetDownloadDates('B');
                 Task.WaitAll(new[] {
@@ -28,6 +29,8 @@ namespace AlphaS2
                 StockManager.DropAllList();
                 StockManager.Initialize();
 
+                List<FetchLog> FileListToUpload= FetchLogManager.GetFileListToUpload();
+                StockManager.GenerateLevel1(FileListToUpload);
                 Console.ReadKey(false);
             }
         }

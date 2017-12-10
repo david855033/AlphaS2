@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace AlphaS2
 {
-    static class StockManager {
+    static class StockManager
+    {
         static int[] DAYS = new int[] { 3, 5, 10, 15, 20, 30, 40, 50, 60 };
         static int[] DAYS_MACD = new int[] { 10, 20, 40, 60 };
         static int[] DAYS_KD = new int[] { 5, 10, 20, 40, 60 };
@@ -15,7 +18,7 @@ namespace AlphaS2
         static int[] DAYS_DMI = new int[] { 10, 20, 60 };
         static int[] DAYS_FP = new int[] { 5, 10, 20, 30, 40, 50, 60, 70, 80 };
         static int[] DAYS_FR = new int[] { 20, 40, 60 };
-      
+
         public static void Initialize() {
             InitializeStockList();
             InitializeLevel1();
@@ -37,6 +40,8 @@ namespace AlphaS2
                 sql.SetPrimaryKey("stock_list", "id");
             }
         }
+
+
         static void LoadStockList() {
             using (Sql sql = new Sql()) {
                 var inserData = new SqlInsertData();
@@ -48,7 +53,7 @@ namespace AlphaS2
                 sql.InsertRow("stock_list", inserData);
             }
         }
-      
+
 
         //level 1為原始資料
         static void InitializeLevel1() {
@@ -67,6 +72,34 @@ namespace AlphaS2
                 });
                 sql.SetPrimaryKeys("level1", new string[] { "id", "date" });
             }
+        }
+        public static void GenerateLevel1(List<FetchLog> fetchLog) {
+            //查詢及讀取A組檔案
+            List<string> fileListA = fetchLog
+                .Where(x => x.type == 'A')
+                .Select(x => x.FilePath).ToList();
+            foreach (var f in fileListA) {
+                using (var sr = new StreamReader(f, Encoding.Default)) {
+                    string[] content = sr.ReadToEnd().Split('\n');
+                    //選取股票資料行
+                    string pattern = @"\A(=?\""\d{4,}\D?\"",)";
+                    string[] stockData = content
+                        .Where(x => Regex.IsMatch(x, pattern))
+                        .Select(x => x.TrimEnd(new[] { ',', '\r' })).ToArray();
+                    foreach (var row in stockData) {
+                        //去除引號內逗點並以陣列回傳各欄位資料
+                        var dataFields =
+                            Regex.Matches(row, @"=?"".*?""")
+                            .Cast<Match>()
+                            .Select(x => x.Value.Replace(",", "").Replace("\"", ""));
+                    }
+                }
+            }
+
+            //查詢及讀取B組檔案
+            List<string> fileListB = fetchLog
+                .Where(x => x.type == 'B')
+                .Select(x => x.FilePath).ToList();
         }
         //level 2為還原除權息後資料
         static void InitializeLevel2() {
@@ -231,7 +264,7 @@ namespace AlphaS2
                 sql.DropTable("stock_list");
             }
         }
-       
+
         static void DropLevel1() {
             using (Sql sql = new Sql()) {
                 sql.DropTable("level1");
@@ -267,4 +300,9 @@ class FetchLog
     public DateTime fetch_datetime;
     public bool empty;
     public bool uploaded;
+    public string FilePath {
+        get {
+            return AlphaS2.GlobalSetting.FOLDER_PATH + $@"\{type}_{date.ToString("yyyyMMdd")}.txt";
+        }
+    }
 }
