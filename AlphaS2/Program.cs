@@ -16,7 +16,7 @@ namespace AlphaS2
                 
                 FileWriter.CheckDirectory();
 
-                //FetchLogManager.InitializeFetchLog();
+                FetchLogManager.InitializeFetchLog();
 
                 List<DateTime> downloadDatesA = FetchLogManager.GetDownloadDates('A');
                 List<DateTime> downloadDatesB = FetchLogManager.GetDownloadDates('B');
