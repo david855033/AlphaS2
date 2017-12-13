@@ -16,13 +16,13 @@ namespace AlphaS2
                 
                 FileWriter.CheckDirectory();
 
-                FetchLogManager.InitializeFetchLog();
+                //FetchLogManager.InitializeFetchLog();
 
                 List<DateTime> downloadDatesA = FetchLogManager.GetDownloadDates('A');
                 List<DateTime> downloadDatesB = FetchLogManager.GetDownloadDates('B');
                 Task.WaitAll(new[] {
                     Task.Factory.StartNew(() =>  Downloader.LoadDates(downloadDatesA, 'A', 2000)),
-                    Task.Factory.StartNew(() =>  Downloader.LoadDates(downloadDatesA, 'B', 2000))
+                    Task.Factory.StartNew(() =>  Downloader.LoadDates(downloadDatesB, 'B', 2000))
                 });
 
 

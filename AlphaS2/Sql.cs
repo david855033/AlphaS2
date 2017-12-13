@@ -7,7 +7,8 @@ using System.Data.SqlClient;
 using System.Data;
 namespace AlphaS2
 {
-    class Sql : IDisposable {
+    class Sql : IDisposable
+    {
         SqlConnection connection;
         string connectionStr = @"Server=localhost\SQLEXPRESS;database=alphas2;Trusted_Connection=true;";
         public Sql() {
@@ -183,6 +184,7 @@ namespace AlphaS2
         }
         //新增資料
         public void InsertRow(string table, SqlInsertData insertData) {
+            string lastData = "";
             try {
                 string commandStr = insertData.GetInserQuery(table);
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
@@ -190,18 +192,18 @@ namespace AlphaS2
                 var ColumnList = insertData.ColumnList;
                 var dataList = insertData.DataList;
                 foreach (var row in dataList) {
+                    lastData = "";
                     for (int i = 0; i < ColumnList.Count; i++) {
                         sqlCommand.Parameters["@" + ColumnList[i].name].Value = row[i];
                         sqlCommand.Parameters["@" + ColumnList[i].name].DbType =
-                            row[i].GetType() == typeof(DateTime) ? DbType.Date :
-                            row[i].GetType() == typeof(Int64) ? DbType.Int64 :
-                            row[i].GetType() == typeof(Int32) ? DbType.Int32 :
-                            DbType.String;
+                            insertData.ColumnList[i].dbType;
+                        lastData += $@"{row[i]}:{insertData.ColumnList[i].dbType}" + "\r\n";
                     }
-                    int affectedRow = sqlCommand.ExecuteNonQuery();
-                    Console.WriteLine($"SQL: Insert, ({affectedRow})");
+                    sqlCommand.ExecuteNonQuery();
                 }
+                Console.WriteLine($"SQL: Insert, ({table}) {insertData.DataList.Count} rows");
             } catch (Exception e) {
+                Console.WriteLine($@"ERROR: {lastData}");
                 Console.WriteLine(e.ToString());
             }
         }
@@ -235,7 +237,7 @@ namespace AlphaS2
         //select
         public DataTable Select(string table, string[] column) {
             var emptyStringArray = new string[] { };
-            return Select( table,  column, emptyStringArray);
+            return Select(table, column, emptyStringArray);
         }
         public DataTable Select(string table, string[] column, string[] condition) {
             try {
@@ -262,6 +264,18 @@ namespace AlphaS2
         public string name = "defaultName";
         public string type = "smallint";
         public SqlDbType sqlDbType;
+        public DbType dbType {
+            get {
+                return
+                    this.type.StartsWith("char") ? DbType.String
+                    : this.type.StartsWith("nchar") ? DbType.String
+                    : this.type.StartsWith("decimal") ? DbType.Decimal
+                    : this.type == "date" ? DbType.Date
+                    : this.type.StartsWith("smalldatetime") ? DbType.DateTime
+                    : this.type.StartsWith("bit") ? DbType.Boolean
+                    : DbType.String;
+            }
+        }
         public bool isNull = false;
         public SqlColumn(string name, string dataType, bool isNull) {
             this.name = name; this.type = dataType; this.isNull = isNull;
@@ -278,12 +292,33 @@ namespace AlphaS2
     {
         public List<SqlColumn> ColumnList = new List<SqlColumn>();
         public List<object[]> DataList = new List<object[]>();
-        public void AddColumn(string name, SqlDbType sqlDbType) {
-            ColumnList.Add(new SqlColumn(name, sqlDbType));
+        public List<string> primaryKeys = new List<string>();
+        public SqlInsertData() {
+        }
+        public SqlInsertData(List<SqlColumn> columnList) {
+            this.ColumnList = columnList;
+        }
+        public void AddColumn(SqlColumn sqlColumn) {
+            ColumnList.Add(sqlColumn);
         }
         public string GetInserQuery(string table) {
-            return $@"INSERT INTO {table}({String.Join(",", ColumnList.Select(x => x.name))})
-                VALUES({String.Join(",", ColumnList.Select(x => "@" + x.name))})";
+            if (primaryKeys.Count > 0) {
+                return $@"begin tran
+                if exists(select * from {table} where {String.Join(" and ", primaryKeys.Select(x => x + "=@" + x))})
+                begin
+                   update {table} set {String.Join(",", ColumnList.Select(x => x.name + "=@" + x.name))} 
+                   where {String.Join(" and ", primaryKeys.Select(x => x + "=@" + x))}
+                end
+                else
+                begin
+                   insert into {table}({String.Join(",", ColumnList.Select(x => x.name))})
+                   values ({String.Join(",", ColumnList.Select(x => "@" + x.name))})
+                end
+                commit tran";
+            } else {
+                return $@"insert into {table}({String.Join(",", ColumnList.Select(x => x.name))}) 
+                   values({ String.Join(",", ColumnList.Select(x => "@" + x.name))})";
+            }
         }
         public void AddCmdParameters(SqlCommand sqlCommand) {
             foreach (var Column in ColumnList) {

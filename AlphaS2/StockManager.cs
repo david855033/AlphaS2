@@ -45,9 +45,9 @@ namespace AlphaS2
         static void LoadStockList() {
             using (Sql sql = new Sql()) {
                 var inserData = new SqlInsertData();
-                inserData.AddColumn("id", System.Data.SqlDbType.NChar);
-                inserData.AddColumn("name", System.Data.SqlDbType.NChar);
-                inserData.AddColumn("type", System.Data.SqlDbType.Char);
+                inserData.AddColumn(new SqlColumn("id", System.Data.SqlDbType.NChar));
+                inserData.AddColumn(new SqlColumn("name", System.Data.SqlDbType.NChar));
+                inserData.AddColumn(new SqlColumn("type", System.Data.SqlDbType.Char));
                 inserData.AddData(new object[] { "0050", "台灣50", "A" });
                 inserData.AddData(new object[] { "1101", "台泥", "A" });
                 sql.InsertRow("stock_list", inserData);
@@ -58,28 +58,20 @@ namespace AlphaS2
         //level 1為原始資料
         static void InitializeLevel1() {
             using (Sql sql = new Sql()) {
-                sql.CreateTable("level1", new SqlColumn[] {
-                    new SqlColumn("id","nchar(10)",false),
-                    new SqlColumn("date","date",false),
-                    new SqlColumn("deal","decimal(19,0)",false),
-                    new SqlColumn("amount","decimal(19,0)",false),
-                    new SqlColumn("price_open","decimal(9,2)",false),
-                    new SqlColumn("price_close","decimal(9,2)",false),
-                    new SqlColumn("price_high","decimal(9,2)",false),
-                    new SqlColumn("price_low","decimal(9,2)",false),
-                    new SqlColumn("difference","decimal(9,2)",false),
-                    new SqlColumn("trade","decimal(9,0)",false)
-                });
+                sql.CreateTable("level1", Column.LEVEL1);
                 sql.SetPrimaryKeys("level1", new string[] { "id", "date" });
             }
         }
         public static void GenerateLevel1(List<FetchLog> fetchLog) {
-            //查詢及讀取A組檔案
-            List<string> fileListA = fetchLog
-                .Where(x => x.type == 'A')
-                .Select(x => x.FilePath).ToList();
-            foreach (var f in fileListA) {
-                using (var sr = new StreamReader(f, Encoding.Default)) {
+
+            foreach (var f in fetchLog.Where(x =>  !x.empty&&x.type=='B')) {
+                string filePath = f.FilePath;
+                string dateString = filePath.Split('\\').Last().Split('_').Last().Split('.').First().Insert(6, "-").Insert(4, "-");
+                Console.WriteLine($@"loading  to level1: { filePath}");
+                SqlInsertData insertData = new SqlInsertData(Column.LEVEL1);
+                insertData.primaryKeys.Add("id");
+                insertData.primaryKeys.Add("date");
+                using (var sr = new StreamReader(filePath, Encoding.Default)) {
                     string[] content = sr.ReadToEnd().Split('\n');
                     //選取股票資料行
                     string pattern = @"\A(=?\""\d{4,}\D?\"",)";
@@ -91,7 +83,40 @@ namespace AlphaS2
                         var dataFields =
                             Regex.Matches(row, @"=?"".*?""")
                             .Cast<Match>()
-                            .Select(x => x.Value.Replace(",", "").Replace("\"", ""));
+                            .Select(x => x.Value.Replace(",", "").Replace("\"", "")).ToArray();
+
+                        if (f.type == 'A') {
+                            insertData.AddData(new object[] {
+                                dataFields[0],
+                                dateString,
+                                dataFields[2],
+                                dataFields[4],
+                                (dataFields[5]=="--"?"0":dataFields[5]), //open
+                                (dataFields[6]=="--"?"0":dataFields[8]), //close
+                                (dataFields[7]=="--"?"0":dataFields[6]), //high
+                                (dataFields[8]=="--"?"0":dataFields[7]), //low
+                                0, //refnextday
+                                (dataFields[9]=="-"?"-":"")+(dataFields[10]=="-"?"0":dataFields[10]), //dif
+                                dataFields[3],
+                            });
+                        } else if (f.type == 'B') {
+                            insertData.AddData(new object[] {
+                                dataFields[0], //id
+                                dateString,    //date
+                                dataFields[8], //deal
+                                dataFields[9], //amount
+                                dataFields[4],  //open
+                                dataFields[2],  //close
+                                dataFields[5], //high
+                                dataFields[6], //low
+                                dataFields[14],  //refnextday
+                                0, //dif
+                                dataFields[10]//trade
+                             });
+                        }
+                    }
+                    using (Sql sql = new Sql()) {
+                        sql.InsertRow("level1", insertData);
                     }
                 }
             }
@@ -293,16 +318,3 @@ namespace AlphaS2
     }
 }
 
-class FetchLog
-{
-    public char type;
-    public DateTime date;
-    public DateTime fetch_datetime;
-    public bool empty;
-    public bool uploaded;
-    public string FilePath {
-        get {
-            return AlphaS2.GlobalSetting.FOLDER_PATH + $@"\{type}_{date.ToString("yyyyMMdd")}.txt";
-        }
-    }
-}

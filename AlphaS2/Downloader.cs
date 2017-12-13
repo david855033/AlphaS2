@@ -13,32 +13,47 @@ namespace AlphaS2
     static class Downloader
     {
 
-        public static string LoadDate(DateTime thisDate, char type = ' ') {
+        public static string LoadDate(DateTime thisDate, char type = ' ', int timeOut = 0) {
             string url = "";
+            string filePath = GlobalSetting.FOLDER_PATH + "\\" + type + "_" + thisDate.ToString("yyyyMMdd") + ".txt";
+            bool fileExist = File.Exists(filePath);
+
             if (type == 'A') {
                 url = $@"http://www.twse.com.tw/exchangeReport/MI_INDEX?response=csv&date={thisDate.ToString("yyyyMMdd")}&type=ALL";
             } else if (type == 'B') {
-                url = $@"http://www.tpex.org.tw/web/stock/aftertrading/otc_quotes_no1430/stk_wn1430_download.php?l=zh-tw&d={thisDate.Year - 1911}/{thisDate.ToString("MM/dd")}&se=AL&s=0,asc,0";
+                url = $@"http://www.tpex.org.tw/web/stock/aftertrading/daily_close_quotes/stk_quote_download.php?l=zh-tw&d={thisDate.Year - 1911}/{thisDate.ToString("MM/dd")}&s=0,asc,0";
             } else {
                 Console.WriteLine("UNDEFINED STOCK TYPE!");
                 return "";
             }
-            HttpWebRequest req = (HttpWebRequest)HttpWebRequest.Create(url);
-            req.Method = "GET";
             string responseString = "";
-            using (WebResponse response = req.GetResponse()) {
-                Console.WriteLine($"fetching {url} ...");
+            if (fileExist) {
+                using (StreamReader sr = new StreamReader(filePath, Encoding.Default)) {
+                    responseString = sr.ReadToEnd();
+                    Console.WriteLine($@"existed file: {filePath}");
+                }
+            } else {
+                HttpWebRequest req = (HttpWebRequest)HttpWebRequest.Create(url);
+                req.Method = "GET";
+                using (WebResponse response = req.GetResponse()) {
+                    Console.WriteLine($"fetching {url} ...");
 
-                var receiveStream = response.GetResponseStream();
-                StreamReader readStream = new StreamReader(receiveStream, Encoding.Default);
+                    var receiveStream = response.GetResponseStream();
+                    StreamReader readStream = new StreamReader(receiveStream, Encoding.Default);
 
-                Console.WriteLine("Response stream received.");
-                responseString = readStream.ReadToEnd();
+                    Console.WriteLine("Response stream received.");
+                    responseString = readStream.ReadToEnd();
 
-                response.Close();
-                readStream.Close();
+                    response.Close();
+                    readStream.Close();
+                }
+                if (timeOut > 0) {
+                    Thread.Sleep(timeOut);
+                }
+                FileWriter.WriteToFile(thisDate.ToString(type + "_" + "yyyyMMdd"), responseString);
             }
-            bool isEmptyResponse = responseString.Trim() == "";
+
+            bool isEmptyResponse = responseString.Trim() == "" || responseString.IndexOf("\"上櫃家數\",\"0\"") >= 0;
             using (Sql sql = new Sql()) {
                 DataTable selectedFetchLog = sql.Select("fetch_log", new string[] { "type", "date" }, new string[] { $@"type = '{type}'", $@"date = '{thisDate.ToString("yyyy-MM-dd")}'" });
                 if (selectedFetchLog.Rows.Count > 0) {
@@ -56,7 +71,7 @@ namespace AlphaS2
                     Console.WriteLine($@"new data downloaded, empty={isEmptyResponse}");
                 } else {
                     sql.InsertRow("fetch_log", new SqlInsertData() {
-                        ColumnList = FetchLogManager.FETCH_LOG_COLUMN,
+                        ColumnList = Column.FETCH_LOG,
                         DataList = new List<object[]> {
                         new object[]{ type , thisDate, DateTime.Now, isEmptyResponse, false},
                         }
@@ -64,18 +79,15 @@ namespace AlphaS2
                     Console.WriteLine($@"new data uploaded, empty={isEmptyResponse}");
                 }
             }
-            FileWriter.WriteToFile(thisDate.ToString(type+"_"+"yyyyMMdd"), responseString);
             return responseString;
         }
-        public static void LoadDates(List<DateTime> thisDates,char type, int timeOut = 0) {
+        public static void LoadDates(List<DateTime> thisDates, char type, int timeOut = 0) {
             Console.WriteLine($@"loading {thisDates.Count} day(s)...");
             int count = 0;
             foreach (var d in thisDates) {
                 Console.WriteLine($@"{++count}/{thisDates.Count}");
-                LoadDate(d, type);
-                if (timeOut > 0) {
-                    Thread.Sleep(timeOut);
-                }
+                LoadDate(d, type, timeOut);
+
             }
         }
     }

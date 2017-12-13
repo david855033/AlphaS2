@@ -9,18 +9,12 @@ namespace AlphaS2
 {
     static class FetchLogManager
     {
-        public static List<SqlColumn> FETCH_LOG_COLUMN = new List<SqlColumn> {
-                    new SqlColumn("type","char(1)",false),
-                    new SqlColumn("date","date",false),
-                    new SqlColumn("fetch_datetime","smalldatetime",false),
-                    new SqlColumn("empty","bit",false),
-                    new SqlColumn("uploaded","bit",false)
-        };
+        
 
         public static void InitializeFetchLog() {
             using (Sql sql = new Sql()) {
                 DropFetchLog();
-                sql.CreateTable("fetch_log", FETCH_LOG_COLUMN);
+                sql.CreateTable("fetch_log", Column.FETCH_LOG);
                 sql.SetPrimaryKeys("fetch_log", new string[] { "type", "date" });
             }
         }
@@ -31,7 +25,7 @@ namespace AlphaS2
         public static List<FetchLog> GetFetchLog(string[] conditions) {
             var resultList = new List<FetchLog>();
             using (Sql sql = new Sql()) {
-                var dataTable = sql.Select("fetch_log", FETCH_LOG_COLUMN.Select(x => x.name).ToArray(),
+                var dataTable = sql.Select("fetch_log", Column.FETCH_LOG.Select(x => x.name).ToArray(),
                     conditions);
                 foreach (DataRow row in dataTable.Rows) {
                     resultList.Add(new FetchLog() {
