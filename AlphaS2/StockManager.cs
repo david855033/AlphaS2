@@ -21,7 +21,6 @@ namespace AlphaS2
 
         public static void Initialize() {
             InitializeStockList();
-            InitializeLevel1();
             InitializeLevel2();
             InitializeLevel3();
             InitializeLevel4();
@@ -41,7 +40,6 @@ namespace AlphaS2
             }
         }
 
-
         static void LoadStockList() {
             using (Sql sql = new Sql()) {
                 var inserData = new SqlInsertData();
@@ -54,7 +52,6 @@ namespace AlphaS2
             }
         }
 
-
         //level 1為原始資料
         static void InitializeLevel1() {
             using (Sql sql = new Sql()) {
@@ -62,9 +59,9 @@ namespace AlphaS2
                 sql.SetPrimaryKeys("level1", new string[] { "id", "date" });
             }
         }
-        public static void GenerateLevel1(List<FetchLog> fetchLog) {
-
-            foreach (var f in fetchLog.Where(x =>  !x.empty&&x.type=='B')) {
+        public static void GenerateLevel1() {
+            List<FetchLog> fetchLog = FetchLogManager.GetFileListToUpload();
+            foreach (var f in fetchLog) {
                 string filePath = f.FilePath;
                 string dateString = filePath.Split('\\').Last().Split('_').Last().Split('.').First().Insert(6, "-").Insert(4, "-");
                 Console.WriteLine($@"loading  to level1: { filePath}");
@@ -87,10 +84,10 @@ namespace AlphaS2
 
                         if (f.type == 'A') {
                             insertData.AddData(new object[] {
-                                dataFields[0],
-                                dateString,
-                                dataFields[2],
-                                dataFields[4],
+                                dataFields[0].Trim(), //id
+                                dateString,   //date
+                                dataFields[2],   //deal
+                                dataFields[4],   //amount
                                 (dataFields[5]=="--"?"0":dataFields[5]), //open
                                 (dataFields[6]=="--"?"0":dataFields[8]), //close
                                 (dataFields[7]=="--"?"0":dataFields[6]), //high
@@ -101,7 +98,7 @@ namespace AlphaS2
                             });
                         } else if (f.type == 'B') {
                             insertData.AddData(new object[] {
-                                dataFields[0], //id
+                                dataFields[0].Trim(), //id
                                 dateString,    //date
                                 dataFields[8], //deal
                                 dataFields[9], //amount
@@ -116,35 +113,66 @@ namespace AlphaS2
                         }
                     }
                     using (Sql sql = new Sql()) {
-                        sql.InsertRow("level1", insertData);
+                        var successInsert = sql.InsertRow("level1", insertData);
+                        if (successInsert) {
+                            sql.UpdateRow("fetch_log",
+                              new Dictionary<string, string>() { { "uploaded", "1" } },
+                              new string[] { $"type = '{f.type}'", $"date = '{dateString}'" });
+                        }
                     }
                 }
             }
-
-            //查詢及讀取B組檔案
-            List<string> fileListB = fetchLog
-                .Where(x => x.type == 'B')
-                .Select(x => x.FilePath).ToList();
         }
+        
         //level 2為還原除權息後資料
         static void InitializeLevel2() {
             using (Sql sql = new Sql()) {
-                sql.CreateTable("level2", new SqlColumn[] {
-                    new SqlColumn("id","nchar(10)",false),
-                    new SqlColumn("date","date",false),
-                    new SqlColumn("amount_per_trade","decimal(19,0)",false),
-                    new SqlColumn("divide","decimal(9,4)",false),
-                    new SqlColumn("fix","decimal(9,4)",false),
-                    new SqlColumn("price_mean","decimal(9,2)",false),
-                    new SqlColumn("Nprice_mean","decimal(9,2)",false),
-                    new SqlColumn("Nprice_open","decimal(9,2)",false),
-                    new SqlColumn("Nprice_close","decimal(9,2)",false),
-                    new SqlColumn("Nprice_high","decimal(9,2)",false),
-                    new SqlColumn("Nprice_low","decimal(9,2)",false)
-                });
+                sql.CreateTable("level2", Column.LEVEL2);
                 sql.SetPrimaryKeys("level2", new string[] { "id", "date" });
             }
         }
+        public static void GenerateLevel2() {
+            List<string> IDList = GetIDListLevel1();
+            List<DateTime> dateList = GetDateListFetchLog();
+            Console.WriteLine($"Generating Level2, available id = {IDList.Count}");
+            using (Sql sql = new Sql()) { 
+                foreach (string id in IDList) {
+                    var dataTableLevel2 = sql.Select("level2",
+                        Column.LEVEL2.Select(x=>x.name).ToArray(),
+                        new string[] { $"id='{id}'" });
+                    var dataTableLevel1 = sql.Select("level1",
+                        Column.LEVEL1.Select(x => x.name).ToArray(),
+                        new string[] { $"id='{id}'" });
+                }
+            }
+        }
+        ////傳回level1內所含的ID(distinct)
+        static List<string> GetIDListLevel1() {
+            var result = new List<string>();
+            using (Sql sql = new Sql()) {
+                var resultTable = sql.SelectDistinct("level1",
+                    new string[] { "id" }, "order by id");
+                for (int i = 0; i < resultTable.Rows.Count; i++) {
+                    result.Add(resultTable.Rows[i][0].ToString().Trim());
+                }
+            }
+            return result;
+        }
+        //傳回fetch_log內所含的date(dinstinct)
+        static List<DateTime> GetDateListFetchLog() {
+            var result = new List<DateTime>();
+            using (Sql sql = new Sql()) {
+                var resultTable = sql.SelectDistinct("fetch_log",
+                   new string[] { "date" },
+                   new string[] { "empty = 0" }, 
+                   "order by date");
+                for (int i = 0; i < resultTable.Rows.Count; i++) {
+                    result.Add(Convert.ToDateTime(resultTable.Rows[i][0].ToString().Trim()));
+                }
+            }
+            return result;
+        }
+
         //level3 為近日計算資料(如平均線、N日內極大極小值)
         static void InitializeLevel3() {
             using (Sql sql = new Sql()) {
@@ -281,7 +309,6 @@ namespace AlphaS2
             DropLevel4();
             DropLevel3();
             DropLevel2();
-            DropLevel1();
             DropStockList();
         }
         static void DropStockList() {

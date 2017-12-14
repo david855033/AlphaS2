@@ -27,10 +27,24 @@ namespace AlphaS2
                 new SqlColumn("price_close","decimal(9,2)",false),
                 new SqlColumn("price_high","decimal(9,2)",false),
                 new SqlColumn("price_low","decimal(9,2)",false),
-                new SqlColumn("price_ref_nextday","decimal(9,2" +
-                    ")",false),
+                new SqlColumn("price_ref_nextday","decimal(9,2)",false),
                 new SqlColumn("difference","decimal(9,2)",false),
                 new SqlColumn("trade","decimal(9,0)",false)
             };
+
+        public static List<SqlColumn> LEVEL2 =
+           new List<SqlColumn> {
+                new SqlColumn("id","nchar(10)",false),
+                new SqlColumn("date","date",false),
+                new SqlColumn("amount_per_trade","decimal(19,0)",false),
+                new SqlColumn("divide","decimal(9,4)",false),
+                new SqlColumn("fix","decimal(9,4)",false),
+                new SqlColumn("price_mean","decimal(9,2)",false),
+                new SqlColumn("Nprice_mean","decimal(9,2)",false),
+                new SqlColumn("Nprice_open","decimal(9,2)",false),
+                new SqlColumn("Nprice_close","decimal(9,2)",false),
+                new SqlColumn("Nprice_high","decimal(9,2)",false),
+                new SqlColumn("Nprice_low","decimal(9,2)",false)
+           };
     }
 }

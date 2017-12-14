@@ -183,7 +183,7 @@ namespace AlphaS2
             }
         }
         //新增資料
-        public void InsertRow(string table, SqlInsertData insertData) {
+        public bool InsertRow(string table, SqlInsertData insertData) {
             string lastData = "";
             try {
                 string commandStr = insertData.GetInserQuery(table);
@@ -205,7 +205,9 @@ namespace AlphaS2
             } catch (Exception e) {
                 Console.WriteLine($@"ERROR: {lastData}");
                 Console.WriteLine(e.ToString());
+                return false;
             }
+            return true;
         }
         //新增列
         public void UpdateRow(string table, Dictionary<string, string> setKeyValue, string[] condition) {
@@ -235,17 +237,46 @@ namespace AlphaS2
         }
 
         //select
+        public DataTable Select(string table) {
+            var emptyStringArray = new string[] { };
+            return Select(table, emptyStringArray, emptyStringArray);
+        }
         public DataTable Select(string table, string[] column) {
             var emptyStringArray = new string[] { };
             return Select(table, column, emptyStringArray);
         }
         public DataTable Select(string table, string[] column, string[] condition) {
             try {
-                string commandStr = $@"select {string.Join(",", column)} FROM {table}" +
+                string commandStr = $@"select " +
+                    (column.Length == 0 ? "*"
+                    : string.Join(",", column)) +
+                    $@" FROM {table}" +
                     (condition.Length > 0 ?
-                        $@" WHERE {String.Join(" and ", condition)};" : "");
+                        $@" WHERE {String.Join(" and ", condition)}" : "");
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
-                Console.WriteLine(commandStr);
+                DataTable dataTable = new DataTable();
+                SqlDataAdapter dataAdapter = new SqlDataAdapter(sqlCommand);
+                dataAdapter.Fill(dataTable);
+                Console.WriteLine($"SQL: Select, table: {table}");
+                return dataTable;
+            } catch (Exception e) {
+                Console.WriteLine(e.ToString());
+                return new DataTable();
+            }
+        }
+
+        //select
+        public DataTable SelectDistinct(string table, string[] column, string other = "") {
+            var emptyStringArray = new string[] { };
+            return SelectDistinct(table, column, emptyStringArray, other);
+        }
+        public DataTable SelectDistinct(string table, string[] column, string[] condition, string other = "") {
+            try {
+                string commandStr = $@"select distinct {string.Join(",", column)} FROM {table}" +
+                    (condition.Length > 0 ?
+                        $@" WHERE {String.Join(" and ", condition)}" : "") +
+                        " " + other;
+                SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
                 DataTable dataTable = new DataTable();
                 SqlDataAdapter dataAdapter = new SqlDataAdapter(sqlCommand);
                 dataAdapter.Fill(dataTable);
