@@ -14,7 +14,7 @@ namespace AlphaS2
         public static void InitializeFetchLog() {
             using (Sql sql = new Sql()) {
                 DropFetchLog();
-                sql.CreateTable("fetch_log", Column.FETCH_LOG);
+                sql.CreateTable("fetch_log", FetchLog.column);
                 sql.SetPrimaryKeys("fetch_log", new string[] { "type", "date" });
             }
         }
@@ -25,7 +25,7 @@ namespace AlphaS2
         public static List<FetchLog> GetFetchLog(string[] conditions) {
             var resultList = new List<FetchLog>();
             using (Sql sql = new Sql()) {
-                var dataTable = sql.Select("fetch_log", Column.FETCH_LOG.Select(x => x.name).ToArray(),
+                var dataTable = sql.Select("fetch_log", FetchLog.column.Select(x => x.name).ToArray(),
                     conditions);
                 foreach (DataRow row in dataTable.Rows) {
                     resultList.Add(new FetchLog() {

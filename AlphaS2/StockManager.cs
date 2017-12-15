@@ -48,14 +48,14 @@ namespace AlphaS2
                 inserData.AddColumn(new SqlColumn("type", System.Data.SqlDbType.Char));
                 inserData.AddData(new object[] { "0050", "台灣50", "A" });
                 inserData.AddData(new object[] { "1101", "台泥", "A" });
-                sql.InsertRow("stock_list", inserData);
+                sql.InsertUpdateRow("stock_list", inserData);
             }
         }
 
         //level 1為原始資料
         static void InitializeLevel1() {
             using (Sql sql = new Sql()) {
-                sql.CreateTable("level1", Column.LEVEL1);
+                sql.CreateTable("level1", Level1.column);
                 sql.SetPrimaryKeys("level1", new string[] { "id", "date" });
             }
         }
@@ -65,7 +65,7 @@ namespace AlphaS2
                 string filePath = f.FilePath;
                 string dateString = filePath.Split('\\').Last().Split('_').Last().Split('.').First().Insert(6, "-").Insert(4, "-");
                 Console.WriteLine($@"loading  to level1: { filePath}");
-                SqlInsertData insertData = new SqlInsertData(Column.LEVEL1);
+                SqlInsertData insertData = new SqlInsertData(Level2.column);
                 insertData.primaryKeys.Add("id");
                 insertData.primaryKeys.Add("date");
                 using (var sr = new StreamReader(filePath, Encoding.Default)) {
@@ -113,7 +113,7 @@ namespace AlphaS2
                         }
                     }
                     using (Sql sql = new Sql()) {
-                        var successInsert = sql.InsertRow("level1", insertData);
+                        var successInsert = sql.InsertUpdateRow("level1", insertData);
                         if (successInsert) {
                             sql.UpdateRow("fetch_log",
                               new Dictionary<string, string>() { { "uploaded", "1" } },
@@ -123,11 +123,11 @@ namespace AlphaS2
                 }
             }
         }
-        
+
         //level 2為還原除權息後資料
         static void InitializeLevel2() {
             using (Sql sql = new Sql()) {
-                sql.CreateTable("level2", Column.LEVEL2);
+                sql.CreateTable("level2", Level2.column);
                 sql.SetPrimaryKeys("level2", new string[] { "id", "date" });
             }
         }
@@ -135,14 +135,79 @@ namespace AlphaS2
             List<string> IDList = GetIDListLevel1();
             List<DateTime> dateList = GetDateListFetchLog();
             Console.WriteLine($"Generating Level2, available id = {IDList.Count}");
-            using (Sql sql = new Sql()) { 
+            using (Sql sql = new Sql()) {
+                int currentLineCursor = Console.CursorTop;
+                int count = 0;
                 foreach (string id in IDList) {
-                    var dataTableLevel2 = sql.Select("level2",
-                        Column.LEVEL2.Select(x=>x.name).ToArray(),
-                        new string[] { $"id='{id}'" });
-                    var dataTableLevel1 = sql.Select("level1",
-                        Column.LEVEL1.Select(x => x.name).ToArray(),
-                        new string[] { $"id='{id}'" });
+                    //找尋level2內最後的一天，並對應dateList內之index
+                    String maxDateStrLevel2 = sql.Select("level2",
+                        new string[] { "max(date)" },
+                         new string[] { $"id='{id}'" }).Rows[0][0].ToString();
+                    int startDateIndex = 0;
+                    if (maxDateStrLevel2 != "") {
+                        DateTime maxDateLevel2 = Convert.ToDateTime(maxDateStrLevel2);
+                        startDateIndex = dateList.FindIndex(x => x == maxDateLevel2);
+                    }
+                    //選取前Level1內資料(含level2資料最後一天之後)
+                    DateTime level1SearchAfterDate = dateList[startDateIndex];
+                    DataTable dataTableLevel1 = sql.Select("level1",
+                        Level1.column.Select(x => x.name).ToArray(),
+                        new string[] { $"id='{id}'",
+                            $"date >= '{level1SearchAfterDate.ToString("yyyy-MM-dd")}'" }
+                        );
+                    List<Level1> level1Data = Level1.DataAdaptor(dataTableLevel1);
+                    //dataTable轉換成list
+                    var lastFixQuery = sql.Select("level2",
+                        new string[] { "top 1 fix" },
+                         new string[] { $"id='{id}'" }, "order by date desc");
+                    Decimal lastFix = 1;
+                    if (lastFixQuery.Rows.Count > 0) {
+                        lastFix = Convert.ToDecimal(lastFixQuery.Rows[0][0]);
+                    }
+
+                    //將level1轉換成level2 並更新sql  ////***todo
+                    Level2 lastLevel2Data = new Level2();
+                    List<Level2> level2DataToInsert = new List<Level2>();
+                    for (int i = 0; i < level1Data.Count; i++) {
+                        var thisLevel2Data = new Level2() {
+                            id = level1Data[i].id,
+                            date = level1Data[i].date
+                        };
+
+                        if (level1Data[i].deal > 0) {
+                            thisLevel2Data.price_mean = level1Data[i].amount / level1Data[i].deal;
+                        } else if (i > 0) {
+                            thisLevel2Data.price_mean = lastLevel2Data.price_mean;
+                        } else {
+                            thisLevel2Data.price_mean = level1Data[0].price_close;
+                        }
+
+                        if (i == 0) {
+                            thisLevel2Data.divide = 0;
+                            thisLevel2Data.fix = lastFix;
+                        } else {
+                            decimal realDifference = level1Data[i].price_close - level1Data[i - 1].price_close;
+                            thisLevel2Data.divide = level1Data[i].difference - realDifference;
+
+                            thisLevel2Data.fix = lastFix *
+                                (level1Data[i - 1].price_close + thisLevel2Data.divide) / 
+                                level1Data[i - 1].price_close;
+
+                            lastFix = thisLevel2Data.fix;
+                        }
+
+                        thisLevel2Data.Nprice_mean = thisLevel2Data.price_mean;
+                        thisLevel2Data.Nprice_open = level1Data[i].price_open;
+                        thisLevel2Data.Nprice_close = level1Data[i].price_close;
+                        thisLevel2Data.Nprice_high = level1Data[i].price_high;
+                        thisLevel2Data.Nprice_low = level1Data[i].price_low;
+
+                        level2DataToInsert.Add(thisLevel2Data);
+                        lastLevel2Data = thisLevel2Data;
+                    }
+                    sql.InsertUpdateRow("level2", Level2.GetInsertData(level2DataToInsert));
+                    Console.SetCursorPosition(0, currentLineCursor);
+                    Console.WriteLine($@"generate level 2 id: {id}  ({++count}/{IDList.Count})       ");
                 }
             }
         }
@@ -164,7 +229,7 @@ namespace AlphaS2
             using (Sql sql = new Sql()) {
                 var resultTable = sql.SelectDistinct("fetch_log",
                    new string[] { "date" },
-                   new string[] { "empty = 0" }, 
+                   new string[] { "empty = 0" },
                    "order by date");
                 for (int i = 0; i < resultTable.Rows.Count; i++) {
                     result.Add(Convert.ToDateTime(resultTable.Rows[i][0].ToString().Trim()));

@@ -183,10 +183,10 @@ namespace AlphaS2
             }
         }
         //新增資料
-        public bool InsertRow(string table, SqlInsertData insertData) {
+        public bool InsertUpdateRow(string table, SqlInsertData insertData) {
             string lastData = "";
             try {
-                string commandStr = insertData.GetInserQuery(table);
+                string commandStr = insertData.GetInsertQuery(table);
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
                 insertData.AddCmdParameters(sqlCommand);
                 var ColumnList = insertData.ColumnList;
@@ -201,7 +201,7 @@ namespace AlphaS2
                     }
                     sqlCommand.ExecuteNonQuery();
                 }
-                Console.WriteLine($"SQL: Insert, ({table}) {insertData.DataList.Count} rows");
+                //Console.WriteLine($"SQL: Insert, ({table}) {insertData.DataList.Count} rows");
             } catch (Exception e) {
                 Console.WriteLine($@"ERROR: {lastData}");
                 Console.WriteLine(e.ToString());
@@ -217,7 +217,7 @@ namespace AlphaS2
                         where {String.Join(" and ", condition)}";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
                 sqlCommand.ExecuteNonQuery();
-                Console.WriteLine($"SQL: Update Row, table: {table}");
+                //Console.WriteLine($"SQL: Update Row, table: {table}");
             } catch (Exception e) {
                 Console.WriteLine(e.ToString());
             }
@@ -230,7 +230,7 @@ namespace AlphaS2
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
                 sqlCommand.ExecuteNonQuery();
 
-                Console.WriteLine($"SQL: Delete Row, table: {table}");
+                //Console.WriteLine($"SQL: Delete Row, table: {table}");
             } catch (Exception e) {
                 Console.WriteLine(e.ToString());
             }
@@ -241,23 +241,24 @@ namespace AlphaS2
             var emptyStringArray = new string[] { };
             return Select(table, emptyStringArray, emptyStringArray);
         }
-        public DataTable Select(string table, string[] column) {
+        public DataTable Select(string table, string[] column, string other = "") {
             var emptyStringArray = new string[] { };
-            return Select(table, column, emptyStringArray);
+            return Select(table, column, emptyStringArray,other);
         }
-        public DataTable Select(string table, string[] column, string[] condition) {
+        public DataTable Select(string table, string[] column, string[] condition, string other = "") {
             try {
                 string commandStr = $@"select " +
                     (column.Length == 0 ? "*"
                     : string.Join(",", column)) +
                     $@" FROM {table}" +
                     (condition.Length > 0 ?
-                        $@" WHERE {String.Join(" and ", condition)}" : "");
+                        $@" WHERE {String.Join(" and ", condition)}" : "")+ " "+
+                        other;
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
                 DataTable dataTable = new DataTable();
                 SqlDataAdapter dataAdapter = new SqlDataAdapter(sqlCommand);
                 dataAdapter.Fill(dataTable);
-                Console.WriteLine($"SQL: Select, table: {table}");
+                //Console.WriteLine($"SQL: Select, table: {table}");
                 return dataTable;
             } catch (Exception e) {
                 Console.WriteLine(e.ToString());
@@ -280,14 +281,13 @@ namespace AlphaS2
                 DataTable dataTable = new DataTable();
                 SqlDataAdapter dataAdapter = new SqlDataAdapter(sqlCommand);
                 dataAdapter.Fill(dataTable);
-                Console.WriteLine($"SQL: Select, table: {table}");
+                //Console.WriteLine($"SQL: Select, table: {table}");
                 return dataTable;
             } catch (Exception e) {
                 Console.WriteLine(e.ToString());
                 return new DataTable();
             }
         }
-
     }
 
     class SqlColumn
@@ -324,6 +324,7 @@ namespace AlphaS2
         public List<SqlColumn> ColumnList = new List<SqlColumn>();
         public List<object[]> DataList = new List<object[]>();
         public List<string> primaryKeys = new List<string>();
+
         public SqlInsertData() {
         }
         public SqlInsertData(List<SqlColumn> columnList) {
@@ -332,7 +333,7 @@ namespace AlphaS2
         public void AddColumn(SqlColumn sqlColumn) {
             ColumnList.Add(sqlColumn);
         }
-        public string GetInserQuery(string table) {
+        public string GetInsertQuery(string table) {
             if (primaryKeys.Count > 0) {
                 return $@"begin tran
                 if exists(select * from {table} where {String.Join(" and ", primaryKeys.Select(x => x + "=@" + x))})

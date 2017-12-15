@@ -70,8 +70,8 @@ namespace AlphaS2
                     );
                     Console.WriteLine($@"new data downloaded, empty={isEmptyResponse}");
                 } else {
-                    sql.InsertRow("fetch_log", new SqlInsertData() {
-                        ColumnList = Column.FETCH_LOG,
+                    sql.InsertUpdateRow("fetch_log", new SqlInsertData() {
+                        ColumnList = FetchLog.column,
                         DataList = new List<object[]> {
                         new object[]{ type , thisDate, DateTime.Now, isEmptyResponse, false},
                         }
