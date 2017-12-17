@@ -19,18 +19,21 @@ namespace AlphaS2
                 StockManager.DropAllList();
                 StockManager.Initialize();
 
+                //StockManager.DropLevel1();
+                //StockManager.InitializeLevel1();
+
                 //FetchLogManager.InitializeFetchLog();
 
-                //List<DateTime> downloadDatesA = FetchLogManager.GetDownloadDates('A');
-                //List<DateTime> downloadDatesB = FetchLogManager.GetDownloadDates('B');
-                //Task.WaitAll(new[] {
-                //    Task.Factory.StartNew(() =>  Downloader.LoadDates(downloadDatesA, 'A', 2000)),
-                //    Task.Factory.StartNew(() =>  Downloader.LoadDates(downloadDatesB, 'B', 2000))
-                //});
+                List<DateTime> downloadDatesA = FetchLogManager.GetDownloadDates('A');
+                List<DateTime> downloadDatesB = FetchLogManager.GetDownloadDates('B');
+                Task.WaitAll(new[] {
+                    Task.Factory.StartNew(() =>  Downloader.LoadDates(downloadDatesA, 'A', 2000)),
+                    Task.Factory.StartNew(() =>  Downloader.LoadDates(downloadDatesB, 'B', 2000))
+                });
 
                 StockManager.GenerateLevel1();
 
-                StockManager.GenerateLevel2();
+                //StockManager.GenerateLevel2();
 
                 Console.WriteLine("End of Program.");
                 Console.ReadKey(false);
