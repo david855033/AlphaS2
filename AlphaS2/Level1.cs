@@ -18,7 +18,7 @@ namespace AlphaS2
         public decimal price_high;
         public decimal price_low;
         public decimal price_ref_nextday;
-        public decimal difference;
+        public decimal divide;
         public decimal trade;
 
         public static List<SqlColumn> column =
@@ -33,7 +33,7 @@ namespace AlphaS2
                 new SqlColumn("price_high","decimal(9,2)",false),
                 new SqlColumn("price_low","decimal(9,2)",false),
                 new SqlColumn("price_ref_nextday","decimal(9,2)",false),
-                new SqlColumn("difference","decimal(9,2)",false),
+                new SqlColumn("divide","decimal(9,2)",false),
                 new SqlColumn("trade","decimal(9,0)",false)
           };
 
@@ -47,11 +47,11 @@ namespace AlphaS2
                     amount = (decimal)row["amount"],
                     price_open = (decimal)row["price_open"],
                     price_close = (decimal)row["price_close"],
-                    price_close_nonzero = (decimal)row["price_close"],
+                    price_close_nonzero = (decimal)row["price_close_nonzero"],
                     price_high = (decimal)row["price_high"],
                     price_low = (decimal)row["price_low"],
                     price_ref_nextday = (decimal)row["price_ref_nextday"],
-                    difference = (decimal)row["difference"],
+                    divide = (decimal)row["divide"],
                     trade = (decimal)row["trade"]
                 });
             }

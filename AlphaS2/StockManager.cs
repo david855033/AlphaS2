@@ -65,80 +65,87 @@ namespace AlphaS2
             Dictionary<string, string> lastCloseSet = new Dictionary<string, string>();
 
             foreach (var f in fetchLog) {
-                string filePath = f.FilePath;
-                string dateString = filePath.Split('\\').Last().Split('_').Last().Split('.').First().Insert(6, "-").Insert(4, "-");
-                Console.WriteLine($@"loading  to level1: {filePath}");
-                SqlInsertData insertData = new SqlInsertData(Level1.column);
-                insertData.primaryKeys.Add("id");
-                insertData.primaryKeys.Add("date");
-                using (var sr = new StreamReader(filePath, Encoding.Default)) {
-                    string[] content = sr.ReadToEnd().Split('\n');
-                    //選取股票資料行
-                    string pattern = @"\A(=?\""\d{4,}\D?\"",)";
-                    string[] stockData = content
-                        .Where(x => Regex.IsMatch(x, pattern))
-                        .Select(x => x.TrimEnd(new[] { ',', '\r' })).ToArray();
+                if (f.type == 'A' || f.type == 'B') {
+                    UpdateAB(lastCloseSet, f);
+                } else if (f.type == 'Z') {
+                    UpdateZ(f);
+                }
+            }
+        }
 
-                    foreach (var row in stockData) {
-                        //去除引號內逗點並以陣列回傳各欄位資料
-                        var dataFields =
-                            Regex.Matches(row, @"=?"".*?""")
-                            .Cast<Match>()
-                            .Select(x => x.Value.Replace(",", "").Replace("\"", "")).ToArray();
+        private static void UpdateAB(Dictionary<string, string> lastCloseSet, FetchLog f) {
+            string filePath = f.FilePath;
+            string dateString = filePath.Split('\\').Last().Split('_').Last().Split('.').First().Insert(6, "-").Insert(4, "-");
+            Console.WriteLine($@"loading  to level1: {filePath}");
+            SqlInsertData insertData = new SqlInsertData(Level1.column);
+            insertData.primaryKeys.Add("id");
+            insertData.primaryKeys.Add("date");
+            using (var sr = new StreamReader(filePath, Encoding.Default)) {
+                string[] content = sr.ReadToEnd().Split('\n');
+                //選取股票資料行
+                string pattern = @"\A(=?\""\d{4,}\D?\"",)";
+                string[] stockData = content
+                    .Where(x => Regex.IsMatch(x, pattern))
+                    .Select(x => x.TrimEnd(new[] { ',', '\r' })).ToArray();
 
-                        string id = dataFields[0].Trim();
-                        string deal="", amount = "", price_open = "", price_close = "", nonZeroClose = "", price_high = "", price_low = "", price_ref_nextday = "", difference = "", trade = "";
+                foreach (var row in stockData) {
+                    //去除引號內逗點並以陣列回傳各欄位資料
+                    var dataFields =
+                        Regex.Matches(row, @"=?"".*?""")
+                        .Cast<Match>()
+                        .Select(x => x.Value.Replace(",", "").Replace("\"", "")).ToArray();
 
-                        if (f.type == 'A') {
-                            deal = dataFields[2];   //deal
-                            amount = dataFields[4];   //amount
-                            price_open = (dataFields[5] == "--" ? "0" : dataFields[5]); //open
-                            price_close = (dataFields[8] == "--" ? "0" : dataFields[8]); //close
-                            price_high = (dataFields[6] == "--" ? "0" : dataFields[6]); //high
-                            price_low = (dataFields[7] == "--" ? "0" : dataFields[7]); //low
-                            price_ref_nextday = "0"; //refnextday
-                            difference = (dataFields[9] == "-" ? "-" : "") + (dataFields[10] == "-" ? "0" : dataFields[10]); //dif
-                            trade = dataFields[3];
-                        } else if (f.type == 'B') {
-                            deal = dataFields[8]; //deal
-                            amount = dataFields[9]; //amount
-                            price_open = dataFields[4];  //open
-                            price_close = dataFields[2];  //close
-                            price_high = dataFields[5]; //high
-                            price_low = dataFields[6]; //low
-                            price_ref_nextday = dataFields[14];  //refnextday
-                            difference = "0"; //dif
-                            trade = dataFields[10];//trade
-                        }
+                    string id = dataFields[0].Trim();
+                    string deal = "", amount = "", price_open = "", price_close = "", nonZeroClose = "", price_high = "", price_low = "", price_ref_nextday = "", trade = "";
 
-                        //如果price_close不為零，設定non zero close
-                        if (Convert.ToDecimal(price_close) > 0) {
-                            nonZeroClose = price_close;
+                    if (f.type == 'A') {
+                        deal = dataFields[2];   //deal
+                        amount = dataFields[4];   //amount
+                        price_open = (dataFields[5] == "--" ? "0" : dataFields[5]); //open
+                        price_close = (dataFields[8] == "--" ? "0" : dataFields[8]); //close
+                        price_high = (dataFields[6] == "--" ? "0" : dataFields[6]); //high
+                        price_low = (dataFields[7] == "--" ? "0" : dataFields[7]); //low
+                        price_ref_nextday = "0"; //refnextday
+                        trade = dataFields[3];
+                    } else if (f.type == 'B') {
+                        deal = dataFields[8]; //deal
+                        amount = dataFields[9]; //amount
+                        price_open = dataFields[4].IndexOf("---") >= 0 ? "0" : dataFields[4];  //open
+                        price_close = dataFields[2].IndexOf("---") >= 0 ? "0" : dataFields[2];  //close
+                        price_high = dataFields[5].IndexOf("---") >= 0 ? "0" : dataFields[5]; //high
+                        price_low = dataFields[6].IndexOf("---") >= 0 ? "0" : dataFields[6]; //low
+                        price_ref_nextday = dataFields[14].IndexOf("---") >= 0 ? "0" : dataFields[14]; ;  //refnextday
+                        trade = dataFields[10];//trade
+                    }
+
+                    //如果price_close不為零，設定non zero close
+                    if (Convert.ToDecimal(price_close) > 0) {
+                        nonZeroClose = price_close;
+                    } else {
+                        //如果price_close為0
+                        //搜尋last close set，如果有資料就當作nonZeroClose
+                        if (lastCloseSet.TryGetValue(id, out string tryGetValue)) {
+                            nonZeroClose = tryGetValue;
                         } else {
-                            //如果price_close為0
-                            //搜尋last close set，如果有資料就當作nonZeroClose
-                            if (lastCloseSet.TryGetValue(id, out string tryGetValue)) {
-                                nonZeroClose = tryGetValue;
-                            } else {
-                                //如果last close set沒資料，用sql搜尋上一筆non zero close
-                                using (Sql sql = new Sql()) {
-                                    var lastCloseQuery = sql.Select("level1",
-                                        new string[] { "top 1 price_close_nonzero" },
-                                        new string[] { $"id = '{id}'" },
-                                        "order by date desc");
-                                    if (lastCloseQuery.Rows.Count > 0) {
-                                        nonZeroClose = lastCloseQuery.Rows[0][0].ToString();
-                                    } else {
-                                        //如果還是沒資料，nonZeroClose設定為10
-                                        nonZeroClose = "10";
-                                    }
+                            //如果last close set沒資料，用sql搜尋上一筆non zero close
+                            using (Sql sql = new Sql()) {
+                                var lastCloseQuery = sql.Select("level1",
+                                    new string[] { "top 1 price_close_nonzero" },
+                                    new string[] { $"id = '{id}'" },
+                                    "order by date desc");
+                                if (lastCloseQuery.Rows.Count > 0) {
+                                    nonZeroClose = lastCloseQuery.Rows[0][0].ToString();
+                                } else {
+                                    //如果還是沒資料，nonZeroClose設定為10
+                                    nonZeroClose = "10";
                                 }
                             }
                         }
-                        //將close推入
-                        lastCloseSet[id] = nonZeroClose;
-                       
-                        insertData.AddData(new object[] {
+                    }
+                    //將close推入
+                    lastCloseSet[id] = nonZeroClose;
+
+                    insertData.AddData(new object[] {
                             id, //id
                             dateString,   //date
                             deal,   //deal
@@ -149,22 +156,57 @@ namespace AlphaS2
                             price_high,
                             price_low,
                             price_ref_nextday, //refnextday
-                            difference,
+                            0,
                             trade
                         });
-                    }
-                    using (Sql sql = new Sql()) {
-                        var successInsert = sql.InsertUpdateRow("level1", insertData);
-                        if (successInsert) {
-                            sql.UpdateRow("fetch_log",
-                              new Dictionary<string, string>() { { "uploaded", "1" } },
-                              new string[] { $"type = '{f.type}'", $"date = '{dateString}'" });
-                        }
+                }
+                using (Sql sql = new Sql()) {
+                    var successInsert = sql.InsertUpdateRow("level1", insertData);
+                    if (successInsert) {
+                        sql.UpdateRow("fetch_log",
+                          new Dictionary<string, string>() { { "uploaded", "1" } },
+                          new string[] { $"type = '{f.type}'", $"date = '{dateString}'" });
                     }
                 }
             }
         }
-
+        private static void UpdateZ(FetchLog f) {
+            string filePath = f.FilePath;
+            string dateString = filePath.Split('\\').Last().Split('_').Last().Split('.').First().Insert(6, "-").Insert(4, "-");
+            Console.WriteLine($@"loading to level1, for divide in A: {filePath}");
+            using (var sr = new StreamReader(filePath, Encoding.Default))
+            using (Sql sql = new Sql()) {
+                string[] content = sr.ReadToEnd().Split('\n');
+                //選取股票資料行
+                string[] stockData = content
+                    .Where(x => x.StartsWith("="))
+                    .Select(x => x.TrimEnd(new[] { ',', '\r' })).ToArray();
+                string title = content
+                    .Where(x => x.Contains("權值+息值"))
+                    .Where(x => x.Contains("資料日期")).First();
+                var TitleField =
+                        Regex.Matches(title, @"=?"".*?""")
+                        .Cast<Match>()
+                        .Select(x => x.Value.Replace(",", "").Replace("\"", "")).ToList();
+                int divideColIndex = TitleField.FindIndex(x=> x.Contains("權值+息值"));
+                foreach (var row in stockData) {
+                    //去除引號內逗點並以陣列回傳各欄位資料
+                    var dataFields =
+                        Regex.Matches(row, @"=?"".*?""")
+                        .Cast<Match>()
+                        .Select(x => x.Value.Replace(",", "").Replace("\"", "")).ToArray();
+                    string id = dataFields[1], divide = dataFields[divideColIndex];
+                    var successInsert = sql.UpdateRow("level1",
+                        new Dictionary<string, string>() { { "divide", divide } },
+                        new string[] { $"(id = '{id}')", $"date = '{dateString}'" });
+                    if (successInsert) {
+                        sql.UpdateRow("fetch_log",
+                            new Dictionary<string, string>() { { "uploaded", "1" } },
+                            new string[] { $"type = '{f.type}'", $"date = '{dateString}'" });
+                    }
+                }
+            }
+        }
         //level 2為還原除權息後資料
         public static void InitializeLevel2() {
             using (Sql sql = new Sql()) {
@@ -183,17 +225,19 @@ namespace AlphaS2
                     //找尋level2內最後的一天
                     String maxDateLevel2Str = GetLastDate(sql, "level2", id);
                     //搜尋這一天的對應datelist中的index(startDateIndex)
-                    int startDateIndex = 0;
+                    int startDateIndex = -1;
                     if (maxDateLevel2Str != "") {
                         DateTime maxDateLevel2 = Convert.ToDateTime(maxDateLevel2Str);
                         startDateIndex = dateList.FindIndex(x => x == maxDateLevel2);
                     }
-                    //選取Level1內資料(含level2資料最後一天，及之後的資料)
-                    DateTime level1SearchAfterDate = dateList[startDateIndex];
+                    //選取level1內資料(level2最後一天之後(不包含)=要新增的level2資料)
+                    string dateCondition = startDateIndex >= 0 ?
+                        $"date > '{dateList[startDateIndex].ToString("yyyy-MM-dd")}'" :
+                        $"date >= '{GlobalSetting.START_DATE.ToString("yyyy-MM-dd")}'";   //含第一筆
                     DataTable dataTableLevel1 = sql.Select("level1",
                         Level1.column.Select(x => x.name).ToArray(),
                         new string[] { $"id='{id}'",
-                            $"date >= '{level1SearchAfterDate.ToString("yyyy-MM-dd")}'" }
+                             dateCondition}
                         );
                     List<Level1> level1Data = Level1.DataAdaptor(dataTableLevel1);
                     //選取level2最後一筆fix (預設為1)
@@ -204,66 +248,64 @@ namespace AlphaS2
                     if (lastFixQuery.Rows.Count > 0) {
                         lastFix = Convert.ToDecimal(lastFixQuery.Rows[0][0]);
                     }
-
-                    //建立初始 上一筆資料 (level2的fix以及level1的close) 用來處理交易量為0之情況
-                    Level2 lastLevel2Data = new Level2() { fix = lastFix };
-                    decimal lastLevel1Close = 0;
-                    if (startDateIndex > 0) {
-                        lastLevel1Close = level1Data.First().price_close;
+                    //選取level1最後一筆price_close_non zero / lastRefNextDay
+                    var lastLevel1Query = sql.Select("level1",
+                        new string[] { "top 1 price_close_nonzero", "price_ref_nextday" },
+                         new string[] { $"id='{id}'" }, "order by date desc");
+                    Decimal lastCloseNonZero = 10, lastRefNextDay = 10;
+                    if (lastLevel1Query.Rows.Count > 0) {
+                        lastCloseNonZero = Convert.ToDecimal(lastLevel1Query.Rows[0][0]);
+                        lastRefNextDay = Convert.ToDecimal(lastLevel1Query.Rows[0][1]);
                     }
 
                     //將每筆level1算出level2 並更新sql  
                     List<Level2> level2DataToInsert = new List<Level2>();
-                    for (int i = startDateIndex; i < dateList.Count; i++) {
-                        var thisLevel2Data = new Level2() {
-                            id = level1Data[i].id,
-                            date = level1Data[i + startDateIndex].date
+                    for (int i = startDateIndex + 1; i < dateList.Count; i++) {
+                        Level2 thisLevel2Data = new Level2() {
+                            id = id,
+                            date = dateList[i],
+                            fix = lastFix,
+                            amount_per_trade = 0,
+                            divide = 0,
+                            Nprice_close = 0,
+                            Nprice_high = 0,
+                            Nprice_low = 0,
+                            Nprice_mean = 0,
+                            Nprice_open = 0,
+                            price_mean = 0
                         };
+                        //先找出相同日期的level1 data
+                        Level1 matchLevel1Data = level1Data.Find(x => x.date == dateList[i]);
 
-                        //判斷divide
-                        decimal realDifference;
-                        if (level1Data[i].price_ref_nextday == 0) {
-                            //A組資料 隔日參考價=0
-                            realDifference = level1Data[i].price_close - level1Data[i - 1].price_close;
-                            thisLevel2Data.divide = level1Data[i].difference - realDifference;
-                        } else {
-                            //B組資料 有隔日參考價
-                            realDifference = 0;
-                        }
+                        if (matchLevel1Data != null) {  //有找到level1data
+                            //判斷divide
+                            if (i > 0) {  //第二筆資料之後才需要算divide
+                                if (matchLevel1Data.price_ref_nextday == 0) {
+                                    //A組資料 直接採用當日divide
+                                    thisLevel2Data.divide = matchLevel1Data.divide;
+                                } else {
+                                    //B組資料 前一天的 隔日收盤價-參考價
+                                    thisLevel2Data.divide =
+                                        lastCloseNonZero - lastRefNextDay;
+                                }
+                            }
+                            //若divide>0 將fix乘上倍數
+                            if (thisLevel2Data.divide > 0) { 
+                                thisLevel2Data.fix *=
+                                    matchLevel1Data.price_close_nonzero / 
+                                    (matchLevel1Data.price_close_nonzero - thisLevel2Data.divide);
+                            }
 
-                        if (i == 0) {
-                            thisLevel2Data.divide = 0;
-                            thisLevel2Data.fix = lastFix;
-                        } else {
-                            thisLevel2Data.fix = lastFix *
-                                (level1Data[i - 1].price_close + thisLevel2Data.divide) /
-                                level1Data[i - 1].price_close;
 
+
+
+                            //將資料存到last data
+                            lastCloseNonZero = matchLevel1Data.price_close_nonzero;
                             lastFix = thisLevel2Data.fix;
+                            lastRefNextDay = matchLevel1Data.price_ref_nextday;
                         }
-
-
-                        thisLevel2Data.Nprice_mean = thisLevel2Data.price_mean;
-                        thisLevel2Data.Nprice_open = level1Data[i].price_open;
-                        thisLevel2Data.Nprice_close = level1Data[i].price_close;
-                        thisLevel2Data.Nprice_high = level1Data[i].price_high;
-                        thisLevel2Data.Nprice_low = level1Data[i].price_low;
-
-
-                        //平均價格 => 若成交量為0，平均價格=收盤價格
-                        if (level1Data[i].deal > 0) {
-                            thisLevel2Data.price_mean = level1Data[i].amount / level1Data[i].deal;
-                        } else if (i > 0) {
-                            thisLevel2Data.price_mean = lastLevel2Data.price_mean;
-                        } else {
-                            thisLevel2Data.price_mean = level1Data[0].price_close;
-                        }
-
-
-
 
                         level2DataToInsert.Add(thisLevel2Data);
-                        lastLevel2Data = thisLevel2Data;
                     }
                     sql.InsertUpdateRow("level2", Level2.GetInsertData(level2DataToInsert));
                     Console.SetCursorPosition(0, currentLineCursor);

@@ -210,7 +210,7 @@ namespace AlphaS2
             return true;
         }
         //新增列
-        public void UpdateRow(string table, Dictionary<string, string> setKeyValue, string[] condition) {
+        public Boolean UpdateRow(string table, Dictionary<string, string> setKeyValue, string[] condition) {
             try {
                 string commandStr = $@"update {table}
                         set {String.Join(",", setKeyValue.Keys.Select(x => x + "=" + setKeyValue[x]))}
@@ -220,7 +220,9 @@ namespace AlphaS2
                 //Console.WriteLine($"SQL: Update Row, table: {table}");
             } catch (Exception e) {
                 Console.WriteLine(e.ToString());
+                return false;
             }
+            return true;
         }
         //刪除列
         public void DeleteRow(string table, string[] condition) {
