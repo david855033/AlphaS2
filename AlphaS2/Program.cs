@@ -12,22 +12,23 @@ namespace AlphaS2
 
 
         static void Main(string[] args) {
-            using (Sql sql = new Sql()) {
 
-                FileWriter.CheckDirectory();
+            FileWriter.CheckDirectory();
 
-                StockManager.DropAllList();
-                StockManager.Initialize();
+            StockManager.DropAllList();
+            StockManager.Initialize();
 
-                //StockManager.DropLevel1();
-                //StockManager.InitializeLevel1();
+            //StockManager.DropLevel2();
+            //StockManager.DropLevel1();
+            //StockManager.InitializeLevel1();
+            //StockManager.InitializeLevel2();
 
-                //FetchLogManager.InitializeFetchLog();
+            //FetchLogManager.InitializeFetchLog();
 
-                List<DateTime> downloadDatesA = FetchLogManager.GetDownloadDates('A');
-                List<DateTime> downloadDatesB = FetchLogManager.GetDownloadDates('B');
-                List<DateTime> downloadDatesZ = FetchLogManager.GetDownloadDates('Z');
-                Task.WaitAll(new[] {
+            List<DateTime> downloadDatesA = FetchLogManager.GetDownloadDates('A');
+            List<DateTime> downloadDatesB = FetchLogManager.GetDownloadDates('B');
+            List<DateTime> downloadDatesZ = FetchLogManager.GetDownloadDates('Z');
+            Task.WaitAll(new[] {
                     Task.Factory.StartNew(() =>  {
                         Downloader.LoadDates(downloadDatesA, 'A', 2000);
                         Downloader.LoadDates(downloadDatesZ, 'Z', 3000);
@@ -35,13 +36,14 @@ namespace AlphaS2
                     Task.Factory.StartNew(() =>  Downloader.LoadDates(downloadDatesB, 'B', 2000))
                 });
 
-                StockManager.GenerateLevel1();
+            //StockManager.GenerateLevel1();
 
-                StockManager.GenerateLevel2();
+            //StockManager.GenerateLevel2();
 
-                Console.WriteLine("End of Program.");
-                Console.ReadKey(false);
-            }
+            StockManager.GenerateLevel3();
+            Console.WriteLine("End of Program.");
+            Console.ReadKey(false);
+
         }
     }
 }

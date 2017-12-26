@@ -9,8 +9,6 @@ namespace AlphaS2
 {
     static class FetchLogManager
     {
-        
-
         public static void InitializeFetchLog() {
             using (Sql sql = new Sql()) {
                 DropFetchLog();
@@ -18,6 +16,12 @@ namespace AlphaS2
                 sql.SetPrimaryKeys("fetch_log", new string[] { "type", "date" });
             }
         }
+        static void DropFetchLog() {
+            using (Sql sql = new Sql()) {
+                sql.DropTable("fetch_log");
+            }
+        }
+
         //fetch log adapter
         public static List<FetchLog> GetFetchLog() {
             return GetFetchLog(new string[] { });
@@ -25,7 +29,8 @@ namespace AlphaS2
         public static List<FetchLog> GetFetchLog(string[] conditions) {
             var resultList = new List<FetchLog>();
             using (Sql sql = new Sql()) {
-                var dataTable = sql.Select("fetch_log", FetchLog.column.Select(x => x.name).ToArray(),
+                var dataTable = sql.Select("fetch_log",
+                    FetchLog.column.Select(x => x.name).ToArray(),
                     conditions);
                 foreach (DataRow row in dataTable.Rows) {
                     resultList.Add(new FetchLog() {
@@ -63,10 +68,6 @@ namespace AlphaS2
             }
             return resultDateTime;
         }
-        static void DropFetchLog() {
-            using (Sql sql = new Sql()) {
-                sql.DropTable("fetch_log");
-            }
-        }
+        
     }
 }

@@ -12,15 +12,32 @@ namespace AlphaS2
         public string id;
         public DateTime date;
         public decimal amount_per_trade;
-        public decimal divide;
-        public decimal fix;
-        public decimal price_mean;
-        public decimal Nprice_mean;
-        public decimal Nprice_open;
-        public decimal Nprice_close;
-        public decimal Nprice_high;
-        public decimal Nprice_low;
 
+        private decimal _divide;
+        public decimal Divide { get => Math.Round(_divide, 4); set => _divide = value; }
+
+        private decimal _fix;
+        public decimal Fix { get => Math.Round(_fix, 4); set => _fix = value; }
+
+        private decimal _price_mean;
+        public decimal Price_mean { get => Math.Round(_price_mean, 2); set => _price_mean = value; }
+
+        private decimal _Nprice_mean;
+        public decimal Nprice_mean { get => Math.Round(_Nprice_mean, 2); set => _Nprice_mean = value; }
+
+        private decimal _Nprice_open;
+        public decimal Nprice_open { get => Math.Round(_Nprice_open, 2); set => _Nprice_open = value; }
+
+        private decimal _Nprice_close;
+        public decimal Nprice_close { get => Math.Round(_Nprice_close, 2); set => _Nprice_close = value; }
+
+        private decimal _Nprice_high;
+        public decimal Nprice_high { get => Math.Round(_Nprice_high, 2); set => _Nprice_high = value; }
+
+        private decimal _Nprice_low;
+        public decimal Nprice_low { get => Math.Round(_Nprice_low, 2); set => _Nprice_low = value; }
+
+     
         public static List<SqlColumn> column =
          new List<SqlColumn> {
                 new SqlColumn("id","nchar(10)",false),
@@ -35,6 +52,9 @@ namespace AlphaS2
                 new SqlColumn("Nprice_high","decimal(9,2)",false),
                 new SqlColumn("Nprice_low","decimal(9,2)",false)
          };
+
+        
+
         public static List<Level2> DataAdaptor(DataTable dataTableLevel2) {
             var result = new List<Level2>();
             foreach (DataRow row in dataTableLevel2.Rows) {
@@ -42,9 +62,9 @@ namespace AlphaS2
                     id = ((string)row["id"]).Trim(),
                     date = (DateTime)row["date"],
                     amount_per_trade = (decimal)row["amount_per_trade"],
-                    divide = (decimal)row["divide"],
-                    fix = (decimal)row["fix"],
-                    price_mean = (decimal)row["price_mean"],
+                    Divide = (decimal)row["divide"],
+                    Fix = (decimal)row["fix"],
+                    Price_mean = (decimal)row["price_mean"],
                     Nprice_mean = (decimal)row["Nprice_mean"],
                     Nprice_open = (decimal)row["Nprice_open"],
                     Nprice_close = (decimal)row["Nprice_close"],
@@ -61,7 +81,7 @@ namespace AlphaS2
             result.primaryKeys = new List<string>() { "id", "date" };
             foreach (var data in level2DataToInsert) {
                 result.DataList.Add(new object[] {
-                data.id, data.date,data.amount_per_trade, data.divide, data.fix, data.price_mean,
+                data.id, data.date,data.amount_per_trade, data.Divide, data.Fix, data.Price_mean,
                  data.Nprice_mean, data.Nprice_open,data.Nprice_close, data.Nprice_high,data.Nprice_low });
             }
             return result;
