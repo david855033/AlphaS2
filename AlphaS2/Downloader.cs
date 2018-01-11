@@ -22,7 +22,7 @@ namespace AlphaS2
                 url = $@"http://www.twse.com.tw/exchangeReport/MI_INDEX?response=csv&date={thisDate.ToString("yyyyMMdd")}&type=ALL";
             } else if (type == 'B') {
                 url = $@"http://www.tpex.org.tw/web/stock/aftertrading/daily_close_quotes/stk_quote_download.php?l=zh-tw&d={thisDate.Year - 1911}/{thisDate.ToString("MM/dd")}&s=0,asc,0";
-            } else if (type == 'Z') {
+            } else if (type == 'Z') {   //上櫃除權息
                 url = $@"http://www.twse.com.tw/exchangeReport/TWT49U?response=csv&strDate={thisDate.ToString("yyyyMMdd")}&endDate={thisDate.ToString("yyyyMMdd")}";
             } else {
                 Console.WriteLine("UNDEFINED STOCK TYPE!");

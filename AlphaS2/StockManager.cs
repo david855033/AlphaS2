@@ -391,6 +391,9 @@ namespace AlphaS2
             using (Sql sql = new Sql()) {
                 int currentLineCursor = Console.CursorTop;
                 int count = 0;
+                //***
+                IDList = new List<string> { "1101" };
+                //***
                 foreach (string id in IDList) {
                     //找尋level3內最後的一天
                     String maxDateLevel3Str = GetLastDate(sql, "level3", id);
@@ -460,6 +463,17 @@ namespace AlphaS2
                                     Ratiolize(lastLevel3.values[$@"ma_mean_{d}"], matchedLevel2Data.Nprice_mean, d - 1, 1);
                                 thisLevel3Data.values[$@"ma_volume_{d}"] =
                                     Ratiolize(lastLevel3.values[$@"ma_volume_{d}"], matchedLevel1Data.amount / 10000, d - 1, 1);
+                            }
+                        }
+
+                        //計算MACD ()
+                        foreach (var d1 in GlobalSetting.DAYS_MACD) {
+                            foreach (var d2 in GlobalSetting.DAYS_MACD.Where(x => x > d1)) {
+                                string dif = $@"dif_{d1}_{d2}";
+                                decimal d1_mean = thisLevel3Data.values[$@"ma_mean_{d1}"];
+                                decimal d2_mean = thisLevel3Data.values[$@"ma_mean_{d2}"];
+                                string dem = $@"dem_{d1}_{d2}";
+                                thisLevel3Data.values[dif] = d1_mean - d2_mean;
                             }
                         }
 
