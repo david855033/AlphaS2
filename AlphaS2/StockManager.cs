@@ -9,8 +9,7 @@ using System.Threading.Tasks;
 
 namespace AlphaS2
 {
-    static class StockManager
-    {
+    static class StockManager {
 
         public static void Initialize() {
             Level3.Initiate();
@@ -473,9 +472,18 @@ namespace AlphaS2
                                 decimal d1_mean = thisLevel3Data.values[$@"ma_mean_{d1}"];
                                 decimal d2_mean = thisLevel3Data.values[$@"ma_mean_{d2}"];
                                 string dem = $@"dem_{d1}_{d2}";
-                                thisLevel3Data.values[dif] = d1_mean - d2_mean;
+                                thisLevel3Data.values[dif] = Log(d1_mean / d2_mean) * 100000;
+                                if (lastLevel3 == null) {
+                                    thisLevel3Data.values[dem] = thisLevel3Data.values[dif];
+                                } else {
+                                    thisLevel3Data.values[dem] =
+                                    Ratiolize(lastLevel3.values[dem], thisLevel3Data.values[dif], 9, 1);
+                                }
                             }
                         }
+
+                        //計算DMI
+                        //posdm = 今日最高-昨日最高(只取正值)
 
                         level3DataToInsert.Add(thisLevel3Data);
                         lastLevel3 = thisLevel3Data;
@@ -556,6 +564,9 @@ namespace AlphaS2
 
         static decimal Ratiolize(decimal v1, decimal v2, int r1, int r2) {
             return (v1 * r1 + v2 * r2) / (r1 + r2);
+        }
+        static decimal Log(decimal input) {
+            return Convert.ToDecimal(Math.Log((double)input));
         }
     }
 }

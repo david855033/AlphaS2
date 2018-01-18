@@ -26,7 +26,7 @@ namespace AlphaS2
                     newColumns.Add(new SqlColumn($@"ma_{c}_{d}", "decimal(9,2)", false));
                 }
             }
-            //MACD-dif: 不同條moving average間之差異 使用mean
+            //MACD-dif: 不同條moving average間之差異 使用mean, 算法為 Log(D1 / D2) * 10^5
             //MACD-dem: dif之10日ma (在level3)
             //MACD: dif-dem  (在level4)
             foreach (var d1 in GlobalSetting.DAYS_MACD) {
@@ -80,7 +80,7 @@ namespace AlphaS2
                 foreach (string c in column.Select(x => x.name)) {
                     if (c == "id" || c == "date") { continue; }
                     if (data.values.TryGetValue(c, out decimal v)) {
-                        newObjects.Add(Math.Round(v, 2));
+                        newObjects.Add(Math.Round(v, 4));
                     } else {
                         newObjects.Add(-1000);
                     }
