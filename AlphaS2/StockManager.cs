@@ -9,7 +9,8 @@ using System.Threading.Tasks;
 
 namespace AlphaS2
 {
-    static class StockManager {
+    static class StockManager
+    {
 
         public static void Initialize() {
             Level3.Initiate();
@@ -447,6 +448,7 @@ namespace AlphaS2
                             continue;
                         }
                         Level2 matchedLevel2Data = level2Data.Find(x => x.date == dateList[i]);
+                        Level2 matchedLevel2DataYesterday = level2Data.Find(x => x.date == dateList[i - 1]);
                         Level3 thisLevel3Data = new Level3() {
                             id = id,
                             date = dateList[i]
@@ -465,7 +467,7 @@ namespace AlphaS2
                             }
                         }
 
-                        //計算MACD ()
+                        //計算MACD (dif及dem值用log*10^5紀錄)
                         foreach (var d1 in GlobalSetting.DAYS_MACD) {
                             foreach (var d2 in GlobalSetting.DAYS_MACD.Where(x => x > d1)) {
                                 string dif = $@"dif_{d1}_{d2}";
@@ -482,9 +484,35 @@ namespace AlphaS2
                             }
                         }
 
+                        //max min極大極小值 for KDJ
+                        int selectedLevel2Index = level2Data.FindIndex(x => x.date >= thisLevel3Data.date);
+                        foreach (var d in GlobalSetting.DAYS_KD) {
+                            string max = $@"max_price_{d}";
+                            string min = $@"min_price_{d}";
+                            var thisDate = thisLevel3Data.date;
+                            var selectedLevel2Data = level2Data.Skip(selectedLevel2Index - d + 1).Take(d);
+                            thisLevel3Data.values[max] = selectedLevel2Data.Select(x => x.Nprice_mean).Max();
+                            thisLevel3Data.values[min] = selectedLevel2Data.Select(x => x.Nprice_mean).Min();
+                        }
+
                         //計算DMI
                         //posdm = 今日最高-昨日最高(只取正值)
-
+                        //negdm = 昨日最低-今日最低(只取正值)
+                        //tr = max(H - L, H-C(t-1), L-C(t-1))
+                        foreach (var d in GlobalSetting.DAYS_DMI) {
+                            decimal posdm = 0, negdm = 0, tr = 0;
+                            if (lastLevel3 != null) {
+                                posdm = Math.Max(0, matchedLevel2Data.Nprice_high - matchedLevel2DataYesterday.Nprice_high);
+                                negdm = Math.Max(0, matchedLevel2DataYesterday.Nprice_low - matchedLevel2Data.Nprice_low);
+                                decimal tr1 = matchedLevel2Data.Nprice_high - matchedLevel2Data.Nprice_low;
+                                decimal tr2 = matchedLevel2Data.Nprice_high - matchedLevel2DataYesterday.Nprice_close;
+                                decimal tr3 = matchedLevel2Data.Nprice_low - matchedLevel2DataYesterday.Nprice_close;
+                                tr = Math.Max(Math.Max(tr1, Math.Abs(tr2)), Math.Abs(tr3));
+                            }
+                            thisLevel3Data.values[$@"posdm_{d}"] = posdm;
+                            thisLevel3Data.values[$@"negdm_{d}"] = negdm;
+                            thisLevel3Data.values[$@"tr_{d}"] = tr;
+                        }
                         level3DataToInsert.Add(thisLevel3Data);
                         lastLevel3 = thisLevel3Data;
                     }
