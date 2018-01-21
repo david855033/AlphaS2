@@ -16,7 +16,6 @@ namespace AlphaS2
             Level3.Initiate();
             Level4.Initiate();
             InitializeStockList();
-            InitializeLevel3();
             InitializeLevel4();
             InitializeLevel5();
             LoadStockList();
@@ -392,7 +391,7 @@ namespace AlphaS2
                 int currentLineCursor = Console.CursorTop;
                 int count = 0;
                 //***
-                IDList = new List<string> { "1101" };
+                //IDList = new List<string> { "1101" };
                 //***
                 foreach (string id in IDList) {
                     //找尋level3內最後的一天
@@ -403,8 +402,8 @@ namespace AlphaS2
                         DateTime maxDateLevel3 = Convert.ToDateTime(maxDateLevel3Str);
                         startDateIndex = dateList.FindIndex(x => x == maxDateLevel3);
                     }
-                    //startDateIndex必須大於60
-                    startDateIndex = Math.Max(60, startDateIndex);
+                    //startDateIndex必須大於0
+                    startDateIndex = Math.Max(0, startDateIndex);
 
                     //選取level2內資料(起點要回推60日) 至最新的資料
                     const int BACK_DAYS = 60;
@@ -474,7 +473,7 @@ namespace AlphaS2
                                 decimal d1_mean = thisLevel3Data.values[$@"ma_mean_{d1}"];
                                 decimal d2_mean = thisLevel3Data.values[$@"ma_mean_{d2}"];
                                 string dem = $@"dem_{d1}_{d2}";
-                                thisLevel3Data.values[dif] = Log(d1_mean / d2_mean) * 100000;
+                                thisLevel3Data.values[dif] = d2_mean != 0 ? Log(d1_mean / d2_mean) * 100000 : 0;
                                 if (lastLevel3 == null) {
                                     thisLevel3Data.values[dem] = thisLevel3Data.values[dif];
                                 } else {
@@ -501,17 +500,24 @@ namespace AlphaS2
                         //tr = max(H - L, H-C(t-1), L-C(t-1))
                         foreach (var d in GlobalSetting.DAYS_DMI) {
                             decimal posdm = 0, negdm = 0, tr = 0;
+                            posdm = Math.Max(0, matchedLevel2Data.Nprice_high - matchedLevel2DataYesterday.Nprice_high);
+                            negdm = Math.Max(0, matchedLevel2DataYesterday.Nprice_low - matchedLevel2Data.Nprice_low);
+                            decimal tr1 = matchedLevel2Data.Nprice_high - matchedLevel2Data.Nprice_low;
+                            decimal tr2 = matchedLevel2Data.Nprice_high - matchedLevel2DataYesterday.Nprice_close;
+                            decimal tr3 = matchedLevel2Data.Nprice_low - matchedLevel2DataYesterday.Nprice_close;
+                            tr = Math.Max(Math.Max(tr1, Math.Abs(tr2)), Math.Abs(tr3));
                             if (lastLevel3 != null) {
-                                posdm = Math.Max(0, matchedLevel2Data.Nprice_high - matchedLevel2DataYesterday.Nprice_high);
-                                negdm = Math.Max(0, matchedLevel2DataYesterday.Nprice_low - matchedLevel2Data.Nprice_low);
-                                decimal tr1 = matchedLevel2Data.Nprice_high - matchedLevel2Data.Nprice_low;
-                                decimal tr2 = matchedLevel2Data.Nprice_high - matchedLevel2DataYesterday.Nprice_close;
-                                decimal tr3 = matchedLevel2Data.Nprice_low - matchedLevel2DataYesterday.Nprice_close;
-                                tr = Math.Max(Math.Max(tr1, Math.Abs(tr2)), Math.Abs(tr3));
+                                thisLevel3Data.values[$@"posdm_{d}"] =
+                                    Ratiolize(lastLevel3.values[$@"posdm_{d}"], posdm, d - 1, 1);
+                                thisLevel3Data.values[$@"negdm_{d}"] =
+                                    Ratiolize(lastLevel3.values[$@"negdm_{d}"], negdm, d - 1, 1);
+                                thisLevel3Data.values[$@"tr_{d}"] =
+                                    Ratiolize(lastLevel3.values[$@"tr_{d}"], tr, d - 1, 1);
+                            } else {
+                                thisLevel3Data.values[$@"posdm_{d}"] = posdm;
+                                thisLevel3Data.values[$@"negdm_{d}"] = negdm;
+                                thisLevel3Data.values[$@"tr_{d}"] = tr;
                             }
-                            thisLevel3Data.values[$@"posdm_{d}"] = posdm;
-                            thisLevel3Data.values[$@"negdm_{d}"] = negdm;
-                            thisLevel3Data.values[$@"tr_{d}"] = tr;
                         }
                         level3DataToInsert.Add(thisLevel3Data);
                         lastLevel3 = thisLevel3Data;
@@ -534,6 +540,8 @@ namespace AlphaS2
                 sql.SetPrimaryKeys("level4", new string[] { "id", "date" });
             }
         }
+       
+
         //level 5 = Future Price
         public static void InitializeLevel5() {
             using (Sql sql = new Sql()) {
@@ -555,7 +563,6 @@ namespace AlphaS2
         public static void DropAllList() {
             DropLevel5();
             DropLevel4();
-            DropLevel3();
             DropStockList();
         }
         public static void DropStockList() {
