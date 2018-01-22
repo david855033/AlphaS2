@@ -390,9 +390,6 @@ namespace AlphaS2
             using (Sql sql = new Sql()) {
                 int currentLineCursor = Console.CursorTop;
                 int count = 0;
-                //***
-                //IDList = new List<string> { "1101" };
-                //***
                 foreach (string id in IDList) {
                     //找尋level3內最後的一天
                     String maxDateLevel3Str = GetLastDate(sql, "level3", id);
@@ -490,8 +487,8 @@ namespace AlphaS2
                             string min = $@"min_price_{d}";
                             var thisDate = thisLevel3Data.date;
                             var selectedLevel2Data = level2Data.Skip(selectedLevel2Index - d + 1).Take(d);
-                            thisLevel3Data.values[max] = selectedLevel2Data.Select(x => x.Nprice_mean).Max();
-                            thisLevel3Data.values[min] = selectedLevel2Data.Select(x => x.Nprice_mean).Min();
+                            thisLevel3Data.values[max] = selectedLevel2Data.Select(x => x.Nprice_high).Max();
+                            thisLevel3Data.values[min] = selectedLevel2Data.Select(x => x.Nprice_low).Min();
                         }
 
                         //計算DMI
@@ -500,12 +497,16 @@ namespace AlphaS2
                         //tr = max(H - L, H-C(t-1), L-C(t-1))
                         foreach (var d in GlobalSetting.DAYS_DMI) {
                             decimal posdm = 0, negdm = 0, tr = 0;
-                            posdm = Math.Max(0, matchedLevel2Data.Nprice_high - matchedLevel2DataYesterday.Nprice_high);
-                            negdm = Math.Max(0, matchedLevel2DataYesterday.Nprice_low - matchedLevel2Data.Nprice_low);
-                            decimal tr1 = matchedLevel2Data.Nprice_high - matchedLevel2Data.Nprice_low;
-                            decimal tr2 = matchedLevel2Data.Nprice_high - matchedLevel2DataYesterday.Nprice_close;
-                            decimal tr3 = matchedLevel2Data.Nprice_low - matchedLevel2DataYesterday.Nprice_close;
-                            tr = Math.Max(Math.Max(tr1, Math.Abs(tr2)), Math.Abs(tr3));
+                            posdm = Math.Max(0,
+                                    matchedLevel2Data.Nprice_high - matchedLevel2DataYesterday.Nprice_high);
+                            negdm = Math.Max(0,
+                                    matchedLevel2DataYesterday.Nprice_low - matchedLevel2Data.Nprice_low);
+                            decimal[] points = new decimal[]{
+                                matchedLevel2Data.Nprice_high,
+                                matchedLevel2Data.Nprice_low,
+                                matchedLevel2DataYesterday.Nprice_close };
+                            tr = points.Max() - points.Min();
+
                             if (lastLevel3 != null) {
                                 thisLevel3Data.values[$@"posdm_{d}"] =
                                     Ratiolize(lastLevel3.values[$@"posdm_{d}"], posdm, d - 1, 1);
@@ -540,7 +541,8 @@ namespace AlphaS2
                 sql.SetPrimaryKeys("level4", new string[] { "id", "date" });
             }
         }
-       
+        public static void GenerateLevel4() {
+        }
 
         //level 5 = Future Price
         public static void InitializeLevel5() {

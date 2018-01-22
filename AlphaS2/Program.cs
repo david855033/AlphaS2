@@ -18,12 +18,12 @@ namespace AlphaS2
             StockManager.DropAllList();
             StockManager.Initialize();
 
-            //StockManager.DropLevel3();
+            StockManager.DropLevel3();
             //StockManager.DropLevel2();
             //StockManager.DropLevel1();
             //StockManager.InitializeLevel1();
             //StockManager.InitializeLevel2();
-            //StockManager.InitializeLevel3();
+            StockManager.InitializeLevel3();
 
             //FetchLogManager.InitializeFetchLog();
 
@@ -38,11 +38,11 @@ namespace AlphaS2
                     Task.Factory.StartNew(() =>  Downloader.LoadDates(downloadDatesB, 'B', 2000))
                 });
 
-            //StockManager.GenerateLevel1();
-
-            //StockManager.GenerateLevel2();
+            //StockManager.GenerateLevel1(); //
+            //StockManager.GenerateLevel2(); //
 
             StockManager.GenerateLevel3();
+            StockManager.GenerateLevel4();
 
             
             Console.WriteLine("End of Program.");
