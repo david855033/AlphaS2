@@ -53,14 +53,14 @@ namespace AlphaS2
             }
             Level3.column = newColumns;
         }
-        public static List<Level3> DataAdaptor(DataTable dataTableLevel2) {
+        public static List<Level3> DataAdaptor(DataTable dataTableLevel3) {
             var result = new List<Level3>();
-            foreach (DataRow row in dataTableLevel2.Rows) {
+            foreach (DataRow row in dataTableLevel3.Rows) {
                 var newLevel3 = new Level3() {
                     id = ((string)row["id"]).Trim(),
                     date = (DateTime)row["date"]
                 };
-                foreach (string c in column.Select(x => x.name)) {
+                foreach (string c in column.Select(x => x.name).Where(x=>x!="id" && x!="date")) {
                     newLevel3.values[c] = (decimal)row[c];
                 }
                 result.Add(newLevel3);

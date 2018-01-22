@@ -83,7 +83,7 @@ namespace AlphaS2
                     id = ((string)row["id"]).Trim(),
                     date = (DateTime)row["date"]
                 };
-                foreach (string c in column.Select(x => x.name)) {
+                foreach (string c in column.Select(x => x.name).Where(x => x != "id" && x != "date")) {
                     newLevel4.values[c] = (decimal)row[c];
                 }
                 result.Add(newLevel4);

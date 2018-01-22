@@ -542,6 +542,76 @@ namespace AlphaS2
             }
         }
         public static void GenerateLevel4() {
+            List<string> IDList = GetIDListLevel1();
+            List<DateTime> dateList = GetDateListFetchLog();
+            Console.WriteLine($"Calculating Level4, available id = {IDList.Count}");
+            using (Sql sql = new Sql()) {
+                int currentLineCursor = Console.CursorTop;
+                int count = 0;
+
+                //***
+                IDList = new List<string>() { "1101" };
+                //***
+
+                foreach (string id in IDList) {
+                    //找尋level4內最後的一天
+                    String maxDateLevel4Str = GetLastDate(sql, "level4", id);
+                    //搜尋這一天的對應datelist中的index(startDateIndex)
+                    int startDateIndex = -1;
+                    if (maxDateLevel4Str != "") {
+                        DateTime maxDateLevel4 = Convert.ToDateTime(maxDateLevel4Str);
+                        startDateIndex = dateList.FindIndex(x => x == maxDateLevel4);
+                    }
+                    //startDateIndex必須大於0
+                    startDateIndex = Math.Max(0, startDateIndex);
+
+                    const int BACK_DAYS = 60;
+                    string dateCondition = startDateIndex - BACK_DAYS >= 0 ?
+                        $"date > '{dateList[startDateIndex - BACK_DAYS].ToString("yyyy-MM-dd")}'" :
+                        $"date >= '{GlobalSetting.START_DATE.ToString("yyyy-MM-dd")}'";   //含第一筆
+                    //選取level3內資料(起點要回推60日) 至最新的資料
+                    DataTable dataTableLevel3 = sql.Select("level3",
+                        Level3.column.Select(x => x.name).ToArray(),
+                        new string[] { $"id='{id}'",
+                             dateCondition}
+                        );
+                    List<Level3> level3Data = Level3.DataAdaptor(dataTableLevel3);
+
+                    //選取level2內資料(起點要回推60日) 至最新的資料
+                    DataTable dataTableLevel2 = sql.Select("level2",
+                        Level2.column.Select(x => x.name).ToArray(),
+                        new string[] { $"id='{id}'",
+                             dateCondition}
+                        );
+                    List<Level2> level2Data = Level2.DataAdaptor(dataTableLevel2);
+
+                    //選取level4最後一筆資料
+                    var lastLevel4Query = sql.Select("level4",
+                        new string[] { "top 1 *" },
+                         new string[] { $"id='{id}'" }, "order by date desc");
+                    List<Level4> lastLevel4Data = Level4.DataAdaptor(lastLevel4Query);
+                    Level4 lastLevel4 = null;
+                    if (lastLevel4Data.Count > 0) {
+                        lastLevel4 = lastLevel4Data.First();
+                    }
+
+                    //算出level4 並更新sql 
+                    List<Level4> level4DataToInsert = new List<Level4>();
+                    for (int i = startDateIndex; i < dateList.Count; i++) {
+                        Level4 thisLevel4Data = new Level4() {
+                            id = id,
+                            date = dateList[i]
+                        };
+
+                        level4DataToInsert.Add(thisLevel4Data);
+                        lastLevel4 = thisLevel4Data;
+                    }
+
+                    sql.InsertUpdateRow("level4", Level4.GetInsertData(level4DataToInsert));
+                    Console.SetCursorPosition(0, currentLineCursor);
+                    Console.WriteLine($@"Calculate level 4 id: {id}  ({++count}/{IDList.Count})       ");
+                }
+            }
         }
 
         //level 5 = Future Price
