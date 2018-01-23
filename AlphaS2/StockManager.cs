@@ -270,7 +270,7 @@ namespace AlphaS2
                             id = id,
                             date = dateList[i],
                             Fix = lastFix,
-                            amount_per_trade = 0,
+                            volume_per_trade = 0,
                             Divide = 0,
                             Nprice_close = 0,
                             Nprice_high = 0,
@@ -302,9 +302,12 @@ namespace AlphaS2
                                     (matchLevel1Data.price_close_nonzero - thisLevel2Data.Divide);
                             }
 
+                            thisLevel2Data.volume = Math.Round(matchLevel1Data.amount / 10000, 0);  //將交易量單位改為萬
+
                             if (matchLevel1Data.trade > 0) {
-                                thisLevel2Data.amount_per_trade = matchLevel1Data.amount / matchLevel1Data.trade;
+                                thisLevel2Data.volume_per_trade = thisLevel2Data.volume / matchLevel1Data.trade;
                             }
+
                             if (matchLevel1Data.deal > 0) {
                                 thisLevel2Data.Price_mean = matchLevel1Data.amount / matchLevel1Data.deal;
                                 thisLevel2Data.Nprice_mean = thisLevel2Data.Price_mean * thisLevel2Data.Fix;
@@ -339,6 +342,10 @@ namespace AlphaS2
         }
         ////傳回level1內所含的ID(distinct)
         static List<string> GetIDListLevel1() {
+            //** TEST **
+            return new List<string>() { "=0050", "1101" };
+            //**
+
             var result = new List<string>();
             using (Sql sql = new Sql()) {
                 var resultTable = sql.SelectDistinct("level1",
@@ -347,6 +354,7 @@ namespace AlphaS2
                     result.Add(resultTable.Rows[i][0].ToString().Trim());
                 }
             }
+
             return result;
         }
         //傳回fetch_log內所含的date(dinstinct)
@@ -414,18 +422,6 @@ namespace AlphaS2
                         );
                     List<Level2> level2Data = Level2.DataAdaptor(dataTableLevel2);
 
-                    //選取level1內資料 (起點要不用回推) 至最新的資料
-                    dateCondition = startDateIndex >= 0 ?
-                        $"date > '{dateList[startDateIndex].ToString("yyyy-MM-dd")}'" :
-                        $"date >= '{GlobalSetting.START_DATE.ToString("yyyy-MM-dd")}'";   //含第一筆
-                    DataTable dataTableLevel1 = sql.Select("level1",
-                        Level1.column.Select(x => x.name).ToArray(),
-                        new string[] { $"id='{id}'",
-                             dateCondition}
-                        );
-                    List<Level1> level1Data = Level1.DataAdaptor(dataTableLevel1);
-
-
                     //選取level3最後一筆資料
                     var lastLevel3Query = sql.Select("level3",
                         new string[] { "top 1 *" },
@@ -438,28 +434,29 @@ namespace AlphaS2
 
                     //將每筆level2算出level3 並更新sql 
                     List<Level3> level3DataToInsert = new List<Level3>();
-                    for (int i = startDateIndex; i < dateList.Count; i++) {
-                        Level1 matchedLevel1Data = level1Data.Find(x => x.date == dateList[i]);
-                        if (matchedLevel1Data == null) {
+                    for (int i = Math.Max(1, startDateIndex); i < dateList.Count; i++) {
+                        Level2 matchedLevel2Data = level2Data.Find(x => x.date == dateList[i]);
+                        if (matchedLevel2Data == null) {
                             continue;
                         }
-                        Level2 matchedLevel2Data = level2Data.Find(x => x.date == dateList[i]);
                         Level2 matchedLevel2DataYesterday = level2Data.Find(x => x.date == dateList[i - 1]);
                         Level3 thisLevel3Data = new Level3() {
                             id = id,
-                            date = dateList[i]
+                            date = dateList[i],
+                            volume = matchedLevel2Data.volume,
+                            volume_per_trade = matchedLevel2Data.volume_per_trade,
+                            Nprice_mean = matchedLevel2Data.Nprice_mean
                         };
 
-                        //計算MA (成交量改用萬元作單位)
                         foreach (var d in GlobalSetting.DAYS_BA) {
                             if (lastLevel3 == null) {
                                 thisLevel3Data.values[$@"ma_mean_{d}"] = matchedLevel2Data.Nprice_mean;
-                                thisLevel3Data.values[$@"ma_volume_{d}"] = matchedLevel1Data.amount / 10000;
+                                thisLevel3Data.values[$@"ma_volume_{d}"] = matchedLevel2Data.volume;
                             } else {
                                 thisLevel3Data.values[$@"ma_mean_{d}"] =
                                     Ratiolize(lastLevel3.values[$@"ma_mean_{d}"], matchedLevel2Data.Nprice_mean, d - 1, 1);
                                 thisLevel3Data.values[$@"ma_volume_{d}"] =
-                                    Ratiolize(lastLevel3.values[$@"ma_volume_{d}"], matchedLevel1Data.amount / 10000, d - 1, 1);
+                                    Ratiolize(lastLevel3.values[$@"ma_volume_{d}"], matchedLevel2Data.volume, d - 1, 1);
                             }
                         }
 
@@ -470,7 +467,7 @@ namespace AlphaS2
                                 decimal d1_mean = thisLevel3Data.values[$@"ma_mean_{d1}"];
                                 decimal d2_mean = thisLevel3Data.values[$@"ma_mean_{d2}"];
                                 string dem = $@"dem_{d1}_{d2}";
-                                thisLevel3Data.values[dif] = d2_mean != 0 ? Log(d1_mean / d2_mean) * 100000 : 0;
+                                thisLevel3Data.values[dif] = d2_mean != 0 ? Log(d1_mean , d2_mean) : 0;
                                 if (lastLevel3 == null) {
                                     thisLevel3Data.values[dem] = thisLevel3Data.values[dif];
                                 } else {
@@ -492,10 +489,10 @@ namespace AlphaS2
                         }
 
                         //60天內成交量最小值
-                        int selectedLevel1Index = level1Data.FindIndex(x => x.date >= thisLevel3Data.date);
-                        var selectedLevel1Data = level1Data.Skip(selectedLevel1Index - 60 + 1).Take(60);
-                        thisLevel3Data.values["min_volume_60"] = selectedLevel1Data.Select(x => x.amount).Min();
-
+                        {
+                            var selectedLevel2Data = level2Data.Skip(selectedLevel2Index - 60 + 1).Take(60);
+                            thisLevel3Data.values["min_volume_60"] = selectedLevel2Data.Select(x => x.volume).Min();
+                        }
                         //計算DMI
                         //posdm = 今日最高-昨日最高(只取正值)
                         //negdm = 昨日最低-今日最低(只取正值)
@@ -554,10 +551,6 @@ namespace AlphaS2
                 int currentLineCursor = Console.CursorTop;
                 int count = 0;
 
-                //***
-                IDList = new List<string>() { "1101" };
-                //***
-
                 foreach (string id in IDList) {
                     //找尋level4內最後的一天
                     String maxDateLevel4Str = GetLastDate(sql, "level4", id);
@@ -582,14 +575,6 @@ namespace AlphaS2
                         );
                     List<Level3> level3Data = Level3.DataAdaptor(dataTableLevel3);
 
-                    //選取level2內資料(起點要回推60日) 至最新的資料
-                    DataTable dataTableLevel2 = sql.Select("level2",
-                        Level2.column.Select(x => x.name).ToArray(),
-                        new string[] { $"id='{id}'",
-                             dateCondition}
-                        );
-                    List<Level2> level2Data = Level2.DataAdaptor(dataTableLevel2);
-
                     //選取level4最後一筆資料
                     var lastLevel4Query = sql.Select("level4",
                         new string[] { "top 1 *" },
@@ -603,15 +588,34 @@ namespace AlphaS2
                     //算出level4 並更新sql 
                     List<Level4> level4DataToInsert = new List<Level4>();
                     for (int i = startDateIndex; i < dateList.Count; i++) {
-                        Level2 matchedLevel2Data = level2Data.Find(x => x.date == dateList[i]);
                         Level3 matchedLevel3Data = level3Data.Find(x => x.date == dateList[i]);
                         Level4 thisLevel4Data = new Level4() {
                             id = id,
                             date = dateList[i]
                         };
-                        
-                        //計算BA
+                        if (matchedLevel3Data == null) {
+                            continue;
+                        }
 
+                        //計算BA
+                        foreach (var d in GlobalSetting.DAYS_BA) {
+                            thisLevel4Data.values[$@"ba_mean_{d}"] =
+                                matchedLevel3Data.Nprice_mean != 0 ?
+                                Log(matchedLevel3Data.values[$@"ma_mean_{d}"] , matchedLevel3Data.Nprice_mean)
+                                : 0;
+                            thisLevel4Data.values[$@"ba_volume_{d}"] =
+                                matchedLevel3Data.volume != 0 ?
+                                Log(matchedLevel3Data.values[$@"ma_volume_{d}"], matchedLevel3Data.volume) 
+                                : 0; ;
+                        }
+
+                        //MACD: dif-dem 
+                        foreach (var d1 in GlobalSetting.DAYS_MACD) {
+                            foreach (var d2 in GlobalSetting.DAYS_MACD.Where(x => x > d1)) {
+                                thisLevel4Data.values[$@"macd_{d1}_{d2}"] = 
+                                    matchedLevel3Data.values[$@"dif_{d1}_{d2}"]- matchedLevel3Data.values[$@"dem_{d1}_{d2}"];
+                            }
+                        }
 
                         level4DataToInsert.Add(thisLevel4Data);
                         lastLevel4 = thisLevel4Data;
@@ -682,8 +686,12 @@ namespace AlphaS2
         static decimal Ratiolize(decimal v1, decimal v2, int r1, int r2) {
             return (v1 * r1 + v2 * r2) / (r1 + r2);
         }
-        static decimal Log(decimal input) {
-            return Convert.ToDecimal(Math.Log((double)input));
+        static decimal Log(decimal d1,decimal d2) {
+            try {
+                return Convert.ToDecimal(Math.Log((double)d1 / (double)d2))*100000;
+            } catch {
+                return 0;
+            }
         }
     }
 }

@@ -39,7 +39,7 @@ namespace AlphaS2
                 });
 
             //StockManager.GenerateLevel1(); //
-            //StockManager.GenerateLevel2(); //
+            StockManager.GenerateLevel2(); //
             StockManager.GenerateLevel3(); //
 
             StockManager.GenerateLevel4();

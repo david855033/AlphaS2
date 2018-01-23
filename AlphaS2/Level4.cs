@@ -27,11 +27,6 @@ namespace AlphaS2
                 }
             }
 
-            //dif_cost_mean(一段時間的交易成本cost與每日平均交易價mean的差距)，換算成log10
-            foreach (var d in GlobalSetting.DAYS_BA) {
-                newColumns.Add(new SqlColumn($@"dif_cost_mean{d}", "decimal(9,2)", false));
-            }
-
             //MACD-dif: 不同條moving average間之差異 使用mean
             //MACD-dem: dif之10日ma (僅在level3)
             //MACD: dif-dem  (僅在level4)

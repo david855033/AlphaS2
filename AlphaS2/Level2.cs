@@ -11,7 +11,8 @@ namespace AlphaS2
     {
         public string id;
         public DateTime date;
-        public decimal amount_per_trade;
+        public decimal volume;
+        public decimal volume_per_trade;
 
         private decimal _divide;
         public decimal Divide { get => Math.Round(_divide, 4); set => _divide = value; }
@@ -42,7 +43,8 @@ namespace AlphaS2
          new List<SqlColumn> {
                 new SqlColumn("id","nchar(10)",false),
                 new SqlColumn("date","date",false),
-                new SqlColumn("amount_per_trade","decimal(19,0)",false),
+                new SqlColumn("volume","decimal(19,0)",false),
+                new SqlColumn("volume_per_trade","decimal(9,2)",false),
                 new SqlColumn("divide","decimal(9,4)",false),
                 new SqlColumn("fix","decimal(9,4)",false),
                 new SqlColumn("price_mean","decimal(9,2)",false),
@@ -61,7 +63,8 @@ namespace AlphaS2
                 result.Add(new Level2() {
                     id = ((string)row["id"]).Trim(),
                     date = (DateTime)row["date"],
-                    amount_per_trade = (decimal)row["amount_per_trade"],
+                    volume = (decimal)row["volume"],    //單位為萬
+                    volume_per_trade = (decimal)row["volume_per_trade"],
                     Divide = (decimal)row["divide"],
                     Fix = (decimal)row["fix"],
                     Price_mean = (decimal)row["price_mean"],
@@ -81,7 +84,7 @@ namespace AlphaS2
             result.primaryKeys = new List<string>() { "id", "date" };
             foreach (var data in level2DataToInsert) {
                 result.DataList.Add(new object[] {
-                data.id, data.date,data.amount_per_trade, data.Divide, data.Fix, data.Price_mean,
+                data.id, data.date,data.volume,data.volume_per_trade, data.Divide, data.Fix, data.Price_mean,
                  data.Nprice_mean, data.Nprice_open,data.Nprice_close, data.Nprice_high,data.Nprice_low });
             }
             return result;

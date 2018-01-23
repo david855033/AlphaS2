@@ -11,6 +11,10 @@ namespace AlphaS2
     {
         public string id;
         public DateTime date;
+        public decimal volume;
+        public decimal volume_per_trade;
+        private decimal _Nprice_mean;
+        public decimal Nprice_mean { get => Math.Round(_Nprice_mean, 2); set => _Nprice_mean = value; }
         public Dictionary<string, decimal> values = new Dictionary<string, decimal>();
 
         public static List<SqlColumn> column;
@@ -18,7 +22,10 @@ namespace AlphaS2
         public static void Initiate() {
             var newColumns = new List<SqlColumn>() {
                     new SqlColumn("id","nchar(10)",false),
-                    new SqlColumn("date","date",false)
+                    new SqlColumn("date","date",false),
+                    new SqlColumn("volume","decimal(19,0)",false),
+                    new SqlColumn("volume_per_trade","decimal(9,2)",false),
+                    new SqlColumn("Nprice_mean","decimal(9,2)",false)
                 };
             //mean average
             foreach (var c in new string[] { "mean", "volume" }) {
@@ -61,9 +68,13 @@ namespace AlphaS2
             foreach (DataRow row in dataTableLevel3.Rows) {
                 var newLevel3 = new Level3() {
                     id = ((string)row["id"]).Trim(),
-                    date = (DateTime)row["date"]
+                    date = (DateTime)row["date"],
+                    volume = (decimal)row["volume"],    //單位為萬
+                    volume_per_trade = (decimal)row["volume_per_trade"],
+                    Nprice_mean = (decimal)row["Nprice_mean"]
                 };
-                foreach (string c in column.Select(x => x.name).Where(x=>x!="id" && x!="date")) {
+                foreach (string c in column.Select(x => x.name).Where(
+                    x => x != "id" && x != "date" && x != "volume" && x != "volume_per_trade" && x != "Nprice_mean")) {
                     newLevel3.values[c] = (decimal)row[c];
                 }
                 result.Add(newLevel3);
@@ -78,10 +89,10 @@ namespace AlphaS2
             };
             foreach (var data in level3DataToInsert) {
                 var newObjects = new List<object>() {
-                    data.id, data.date
+                    data.id, data.date,data.volume,data.volume_per_trade,data.Nprice_mean
                 };
                 foreach (string c in column.Select(x => x.name)) {
-                    if (c == "id" || c == "date") { continue; }
+                    if (c == "id" || c == "date" || c == "volume" || c == "volume_per_trade" || c == "Nprice_mean") { continue; }
                     if (data.values.TryGetValue(c, out decimal v)) {
                         newObjects.Add(Math.Round(v, 4));
                     } else {
