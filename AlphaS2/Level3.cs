@@ -42,6 +42,9 @@ namespace AlphaS2
                     newColumns.Add(new SqlColumn($@"min_{c}_{d}", "decimal(9,2)", false));
                 }
             }
+            //60交易日內成交量最小值
+            newColumns.Add(new SqlColumn("min_volume_60", "decimal(19,0)", false));
+
             //DMI
             //posdm = 今日最高-昨日最高(只取正值)
             //negdm = 昨日最低-今日最低(只取正值)

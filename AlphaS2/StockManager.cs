@@ -491,6 +491,11 @@ namespace AlphaS2
                             thisLevel3Data.values[min] = selectedLevel2Data.Select(x => x.Nprice_low).Min();
                         }
 
+                        //60天內成交量最小值
+                        int selectedLevel1Index = level1Data.FindIndex(x => x.date >= thisLevel3Data.date);
+                        var selectedLevel1Data = level1Data.Skip(selectedLevel1Index - 60 + 1).Take(60);
+                        thisLevel3Data.values["min_volume_60"] = selectedLevel1Data.Select(x => x.amount).Min();
+
                         //計算DMI
                         //posdm = 今日最高-昨日最高(只取正值)
                         //negdm = 昨日最低-今日最低(只取正值)
@@ -598,10 +603,15 @@ namespace AlphaS2
                     //算出level4 並更新sql 
                     List<Level4> level4DataToInsert = new List<Level4>();
                     for (int i = startDateIndex; i < dateList.Count; i++) {
+                        Level2 matchedLevel2Data = level2Data.Find(x => x.date == dateList[i]);
+                        Level3 matchedLevel3Data = level3Data.Find(x => x.date == dateList[i]);
                         Level4 thisLevel4Data = new Level4() {
                             id = id,
                             date = dateList[i]
                         };
+                        
+                        //計算BA
+
 
                         level4DataToInsert.Add(thisLevel4Data);
                         lastLevel4 = thisLevel4Data;
