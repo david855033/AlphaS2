@@ -15,8 +15,8 @@ namespace AlphaS2
         public static void Initialize() {
             Level3.Initiate();
             Level4.Initiate();
+            Level5.Initiate();
             InitializeStockList();
-            InitializeLevel4();
             InitializeLevel5();
             LoadStockList();
         }
@@ -664,6 +664,14 @@ namespace AlphaS2
                                     Ratiolize(lastLevel4.values[D], thisLevel4Data.values[K], 2, 1);
                             }
                             thisLevel4Data.values[J] = thisLevel4Data.values[K] - thisLevel4Data.values[D];
+
+                            //WR
+                            string wr = $@"wr_{d}";
+                            decimal range = (matchedLevel3Data.values[max] - matchedLevel3Data.values[min]);
+                            thisLevel4Data.values[wr] =
+                                range > 0 ?
+                                (matchedLevel3Data.values[max] - matchedLevel3Data.Nprice_mean) / range * 100
+                                : 0;
                         }
 
 
@@ -679,6 +687,44 @@ namespace AlphaS2
                                 : 0;
                         }
 
+
+                        //DMI
+                        //posDI = posdm / tr
+                        //negDI = negdm / tr
+                        //dx = ABS((posDI-negDI)/(posDI+negDI))
+                        //adx = ema(dx)
+                        //adxr = ema(adx)
+                        const int EMA_DAY = 10;
+                        foreach (var d in GlobalSetting.DAYS_DMI) {
+                            string posDI = $@"posdi_{d}";
+                            string negDI = $@"negdi_{d}";
+                            string dx = $@"dx_{d}";
+                            string adx = $@"adx_{d}";
+                            string adxr = $@"adxr_{d}";
+                            string tr = $@"tr_{d}";
+                            decimal posDI_decimal = thisLevel4Data.values[posDI] =
+                                matchedLevel3Data.values[tr] > 0 ?
+                                matchedLevel3Data.values[$@"posdm_{d}"] / matchedLevel3Data.values[tr] * 100
+                                : 0;
+                            decimal negDI_decimal = thisLevel4Data.values[negDI] =
+                                matchedLevel3Data.values[tr] > 0 ?
+                                matchedLevel3Data.values[$@"negdm_{d}"] / matchedLevel3Data.values[tr] * 100
+                                : 0;
+                            decimal dx_decimal = thisLevel4Data.values[dx] =
+                                negDI_decimal + posDI_decimal > 0 ?
+                                Math.Abs(posDI_decimal - negDI_decimal) / (negDI_decimal + posDI_decimal) * 100
+                                : 0;
+                            decimal adx_decimal = thisLevel4Data.values[adx] =
+                                lastLevel4 != null ?
+                                Ratiolize(lastLevel4.values[dx], dx_decimal, EMA_DAY - 1, 1)
+                                : dx_decimal;
+                            decimal adxr_decimal = thisLevel4Data.values[adxr] =
+                                lastLevel4 != null ?
+                                Ratiolize(lastLevel4.values[adx], adx_decimal, EMA_DAY - 1, 1)
+                                : adx_decimal;
+                        }
+
+
                         level4DataToInsert.Add(thisLevel4Data);
                         lastLevel4 = thisLevel4Data;
                     }
@@ -693,24 +739,17 @@ namespace AlphaS2
         //level 5 = Future Price
         public static void InitializeLevel5() {
             using (Sql sql = new Sql()) {
-                var newColumns = new List<SqlColumn>() {
-                    new SqlColumn("id","nchar(10)",false),
-                    new SqlColumn("date","date",false)
-                };
-                foreach (var d in GlobalSetting.DAYS_FP) {
-                    newColumns.Add(new SqlColumn($@"future_price_{d}", "decimal(9,2)", false));
-                }
-                foreach (var d in GlobalSetting.DAYS_FR) {
-                    newColumns.Add(new SqlColumn($@"future_rank_{d}", "decimal(9,2)", false));
-                }
+                var newColumns = Level5.column;
                 sql.CreateTable("level5", newColumns);
                 sql.SetPrimaryKeys("level5", new string[] { "id", "date" });
             }
         }
+        public static void GenerateLevel5() {
+
+        }
 
         public static void DropAllList() {
             DropLevel5();
-            DropLevel4();
             DropStockList();
         }
         public static void DropStockList() {

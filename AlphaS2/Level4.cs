@@ -59,6 +59,7 @@ namespace AlphaS2
                     newColumns.Add(new SqlColumn($@"{c}_{d}", "decimal(9,2)", false));
                 }
             }
+
             //W%R = Hn-Cn / Hn - Ln
             foreach (var c in new string[] { "wr" }) {
                 foreach (var d in GlobalSetting.DAYS_KD) {
