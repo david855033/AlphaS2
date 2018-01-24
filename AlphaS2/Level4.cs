@@ -47,11 +47,7 @@ namespace AlphaS2
             foreach (var d in GlobalSetting.DAYS_RSI) {
                 newColumns.Add(new SqlColumn($@"rsi_{d}", "decimal(9,2)", false));
             }
-            foreach (var d1 in GlobalSetting.DAYS_RSI) {
-                foreach (var d2 in GlobalSetting.DAYS_RSI.Where(x => x > d1)) {
-                    newColumns.Add(new SqlColumn($@"rsi_ba_{d1}_{d2}", "decimal(9,2)", false));
-                }
-            }
+
             //DMI
             //posDI = posdm / tr
             //negDI = negdm / tr

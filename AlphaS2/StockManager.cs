@@ -445,7 +445,8 @@ namespace AlphaS2
                             date = dateList[i],
                             volume = matchedLevel2Data.volume,
                             volume_per_trade = matchedLevel2Data.volume_per_trade,
-                            Nprice_mean = matchedLevel2Data.Nprice_mean
+                            Nprice_mean = matchedLevel2Data.Nprice_mean,
+                            Nprice_close = matchedLevel2Data.Nprice_close
                         };
 
                         foreach (var d in GlobalSetting.DAYS_BA) {
@@ -467,7 +468,7 @@ namespace AlphaS2
                                 decimal d1_mean = thisLevel3Data.values[$@"ma_mean_{d1}"];
                                 decimal d2_mean = thisLevel3Data.values[$@"ma_mean_{d2}"];
                                 string dem = $@"dem_{d1}_{d2}";
-                                thisLevel3Data.values[dif] = d2_mean != 0 ? Log(d1_mean , d2_mean) : 0;
+                                thisLevel3Data.values[dif] = d2_mean != 0 ? Log(d1_mean, d2_mean) : 0;
                                 if (lastLevel3 == null) {
                                     thisLevel3Data.values[dem] = thisLevel3Data.values[dif];
                                 } else {
@@ -493,6 +494,28 @@ namespace AlphaS2
                             var selectedLevel2Data = level2Data.Skip(selectedLevel2Index - 60 + 1).Take(60);
                             thisLevel3Data.values["min_volume_60"] = selectedLevel2Data.Select(x => x.volume).Min();
                         }
+
+                        //RSI的 U D
+                        {
+                            var thisU = Math.Max(0,
+                                matchedLevel2Data.Nprice_close - matchedLevel2DataYesterday.Nprice_close);
+                            var thisD = Math.Max(0,
+                                matchedLevel2DataYesterday.Nprice_close - matchedLevel2Data.Nprice_close);
+                            foreach (var d in GlobalSetting.DAYS_RSI) {
+                                string U = $@"rsi_u_{d}";
+                                string D = $@"rsi_d_{d}";
+                                if (lastLevel3 == null) {
+                                    thisLevel3Data.values[U] = thisU;
+                                    thisLevel3Data.values[D] = thisD;
+                                } else {
+                                    thisLevel3Data.values[U] =
+                                        Ratiolize(lastLevel3.values[U], thisU, d - 1, 1);
+                                    thisLevel3Data.values[D] =
+                                       Ratiolize(lastLevel3.values[D], thisD, d - 1, 1);
+                                }
+                            }
+                        }
+
                         //計算DMI
                         //posdm = 今日最高-昨日最高(只取正值)
                         //negdm = 昨日最低-今日最低(只取正值)
@@ -601,20 +624,59 @@ namespace AlphaS2
                         foreach (var d in GlobalSetting.DAYS_BA) {
                             thisLevel4Data.values[$@"ba_mean_{d}"] =
                                 matchedLevel3Data.Nprice_mean != 0 ?
-                                Log(matchedLevel3Data.values[$@"ma_mean_{d}"] , matchedLevel3Data.Nprice_mean)
+                                Log(matchedLevel3Data.values[$@"ma_mean_{d}"], matchedLevel3Data.Nprice_mean)
                                 : 0;
                             thisLevel4Data.values[$@"ba_volume_{d}"] =
                                 matchedLevel3Data.volume != 0 ?
-                                Log(matchedLevel3Data.values[$@"ma_volume_{d}"], matchedLevel3Data.volume) 
+                                Log(matchedLevel3Data.values[$@"ma_volume_{d}"], matchedLevel3Data.volume)
                                 : 0; ;
                         }
 
                         //MACD: dif-dem 
                         foreach (var d1 in GlobalSetting.DAYS_MACD) {
                             foreach (var d2 in GlobalSetting.DAYS_MACD.Where(x => x > d1)) {
-                                thisLevel4Data.values[$@"macd_{d1}_{d2}"] = 
-                                    matchedLevel3Data.values[$@"dif_{d1}_{d2}"]- matchedLevel3Data.values[$@"dem_{d1}_{d2}"];
+                                thisLevel4Data.values[$@"macd_{d1}_{d2}"] =
+                                    matchedLevel3Data.values[$@"dif_{d1}_{d2}"] - matchedLevel3Data.values[$@"dem_{d1}_{d2}"];
                             }
+                        }
+
+                        //RSV n日內(mean-min)/(max-min)*100
+                        foreach (var d in GlobalSetting.DAYS_KD) {
+                            string rsv = $@"rsv_{d}";
+                            string max = $@"max_price_{d}";
+                            string min = $@"min_price_{d}";
+                            string K = $@"k_{d}";
+                            string D = $@"d_{d}";
+                            string J = $@"j_{d}";
+                            decimal Nprice_mean = matchedLevel3Data.Nprice_mean;
+                            thisLevel4Data.values[rsv] =
+                                matchedLevel3Data.values[max] - matchedLevel3Data.values[min] > 0 ?
+                                (Nprice_mean - matchedLevel3Data.values[min]) /
+                                (matchedLevel3Data.values[max] - matchedLevel3Data.values[min]) * 100
+                                : 50;
+                            if (lastLevel4 == null) {
+                                thisLevel4Data.values[K] = 50;
+                                thisLevel4Data.values[D] = 50;
+                            } else {
+                                thisLevel4Data.values[K] =
+                                    Ratiolize(lastLevel4.values[K], thisLevel4Data.values[rsv], 2, 1);
+                                thisLevel4Data.values[D] =
+                                    Ratiolize(lastLevel4.values[D], thisLevel4Data.values[K], 2, 1);
+                            }
+                            thisLevel4Data.values[J] = thisLevel4Data.values[K] - thisLevel4Data.values[D];
+                        }
+
+
+                        //RSI
+                        foreach (var d in GlobalSetting.DAYS_RSI) {
+                            string rsi = $@"rsi_{d}";
+                            string U = $@"rsi_u_{d}";
+                            string D = $@"rsi_d_{d}";
+                            var sum = (matchedLevel3Data.values[U] + matchedLevel3Data.values[D]);
+                            thisLevel4Data.values[rsi] =
+                                sum > 0 ?
+                                matchedLevel3Data.values[U] / sum * 100
+                                : 0;
                         }
 
                         level4DataToInsert.Add(thisLevel4Data);
@@ -686,9 +748,9 @@ namespace AlphaS2
         static decimal Ratiolize(decimal v1, decimal v2, int r1, int r2) {
             return (v1 * r1 + v2 * r2) / (r1 + r2);
         }
-        static decimal Log(decimal d1,decimal d2) {
+        static decimal Log(decimal d1, decimal d2) {
             try {
-                return Convert.ToDecimal(Math.Log((double)d1 / (double)d2))*100000;
+                return Convert.ToDecimal(Math.Log((double)d1 / (double)d2)) * 100000;
             } catch {
                 return 0;
             }
