@@ -382,6 +382,17 @@ namespace AlphaS2
             }
             return lastDate;
         }
+        //取得某個table-id資料第一筆的日期(以string回傳)
+        static string GetFirstDate(Sql sql, string table, string id) {
+            string firstDate = "";
+            var maxDateSQuery = sql.Select(table,
+                       new string[] { "top 1 date" },
+                        new string[] { $"id='{id}' order by date asc" });
+            if (maxDateSQuery.Rows.Count > 0) {
+                firstDate = maxDateSQuery.Rows[0][0].ToString();
+            }
+            return firstDate;
+        }
 
         //level3 為近日計算資料(如平均線、N日內極大極小值)
         public static void InitializeLevel3() {
@@ -745,7 +756,64 @@ namespace AlphaS2
             }
         }
         public static void GenerateLevel5() {
+            List<string> IDList = GetIDListLevel1();
+            List<DateTime> dateList = GetDateListFetchLog();
+            Console.WriteLine($"Calculating Level5, available id = {IDList.Count}");
+            using (Sql sql = new Sql()) {
+                int currentLineCursor = Console.CursorTop;
+                int count = 0;
+                foreach (string id in IDList) {
+                    //找尋level5內最後的一天
+                    String maxDateLevel5Str = GetLastDate(sql, "level5", id);
+                    //搜尋這一天的對應datelist中的index(startDateIndex)
+                    int startDateIndex = -1;
+                    if (maxDateLevel5Str != "") {
+                        DateTime maxDateLevel5 = Convert.ToDateTime(maxDateLevel5Str);
+                        startDateIndex = dateList.FindIndex(x => x == maxDateLevel5);
+                    }
+                    //startDateIndex必須大於0
+                    startDateIndex = Math.Max(0, startDateIndex);
 
+                    //找尋level2內最後的一天
+                    String maxDateLevel2Str = GetLastDate(sql, "level2", id);
+                    int endDateIndex = -1;
+                    if (maxDateLevel2Str != "") {
+                        DateTime maxDateLevel2 = Convert.ToDateTime(maxDateLevel2Str);
+                        endDateIndex = dateList.FindIndex(x => x == maxDateLevel2);
+                    }
+                    //endDateIndex先-60，之後必須大於0
+                    endDateIndex = Math.Max(0, endDateIndex - 60);
+
+                    string dateCondition =
+                        $"date > '{dateList[startDateIndex].ToString("yyyy-MM-dd")}'";
+                    //選取level2內資料至最新的資料
+                    DataTable dataTableLevel2 = sql.Select("level2",
+                        Level2.column.Select(x => x.name).ToArray(),
+                        new string[] { $"id='{id}'",
+                             dateCondition}
+                        );
+                    List<Level2> level2Data = Level2.DataAdaptor(dataTableLevel2);
+
+
+
+                    //算出level5 並更新sql 
+                    List<Level5> level5DataToInsert = new List<Level5>();
+                    for (int i = startDateIndex; i < endDateIndex; i++) {
+                        Level5 thisLevel5Data = new Level5() {
+                            id = id,
+                            date = dateList[i]
+                        };
+
+                        level5DataToInsert.Add(thisLevel5Data);
+
+                    }
+
+                    sql.InsertUpdateRow("level5", Level5.GetInsertData(level5DataToInsert));
+
+                    Console.SetCursorPosition(0, currentLineCursor);
+                    Console.WriteLine($@"Calculate level 5 id: {id}  ({++count}/{IDList.Count})       ");
+                }
+            }
         }
 
         public static void DropAllList() {
