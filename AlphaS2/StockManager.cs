@@ -782,7 +782,7 @@ namespace AlphaS2
                         endDateIndex = dateList.FindIndex(x => x == maxDateLevel2);
                     }
                     //endDateIndex先-60，之後必須大於0
-                    endDateIndex = Math.Max(0, endDateIndex - 60);
+                    endDateIndex = Math.Max(0, endDateIndex - 80);
 
                     string dateCondition =
                         $"date > '{dateList[startDateIndex].ToString("yyyy-MM-dd")}'";
@@ -803,6 +803,13 @@ namespace AlphaS2
                             id = id,
                             date = dateList[i]
                         };
+                        Level2 matchedLevel2 = level2Data.Find(x => x.date == dateList[i]);
+
+                        foreach (int postDay in GlobalSetting.DAYS_FP) {
+                            Level2 targetLevel2 = level2Data.Find(x => x.date == dateList[i + postDay]);
+                            string colname = $@"future_price_{postDay}";
+                            thisLevel5Data.values[colname] = targetLevel2.Nprice_close;
+                        }
 
                         level5DataToInsert.Add(thisLevel5Data);
 
