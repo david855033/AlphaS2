@@ -16,8 +16,8 @@ namespace AlphaS2
             Level3.Initiate();
             Level4.Initiate();
             Level5.Initiate();
+            Level6.Initiate();
             InitializeStockList();
-            InitializeLevel5();
             LoadStockList();
         }
         static void InitializeStockList() {
@@ -479,7 +479,7 @@ namespace AlphaS2
                                 decimal d1_mean = thisLevel3Data.values[$@"ma_mean_{d1}"];
                                 decimal d2_mean = thisLevel3Data.values[$@"ma_mean_{d2}"];
                                 string dem = $@"dem_{d1}_{d2}";
-                                thisLevel3Data.values[dif] = d2_mean != 0 ? Log(d1_mean, d2_mean) : 0;
+                                thisLevel3Data.values[dif] = Log(d1_mean, d2_mean);
                                 if (lastLevel3 == null) {
                                     thisLevel3Data.values[dem] = thisLevel3Data.values[dif];
                                 } else {
@@ -634,13 +634,10 @@ namespace AlphaS2
                         //計算BA
                         foreach (var d in GlobalSetting.DAYS_BA) {
                             thisLevel4Data.values[$@"ba_mean_{d}"] =
-                                matchedLevel3Data.Nprice_mean != 0 ?
-                                Log(matchedLevel3Data.values[$@"ma_mean_{d}"], matchedLevel3Data.Nprice_mean)
-                                : 0;
+                                Log(matchedLevel3Data.values[$@"ma_mean_{d}"], matchedLevel3Data.Nprice_mean);
+
                             thisLevel4Data.values[$@"ba_volume_{d}"] =
-                                matchedLevel3Data.volume != 0 ?
-                                Log(matchedLevel3Data.values[$@"ma_volume_{d}"], matchedLevel3Data.volume)
-                                : 0; ;
+                                Log(matchedLevel3Data.values[$@"ma_volume_{d}"], matchedLevel3Data.volume);
                         }
 
                         //MACD: dif-dem 
@@ -794,8 +791,6 @@ namespace AlphaS2
                         );
                     List<Level2> level2Data = Level2.DataAdaptor(dataTableLevel2);
 
-
-
                     //算出level5 並更新sql 
                     List<Level5> level5DataToInsert = new List<Level5>();
                     for (int i = startDateIndex; i < endDateIndex; i++) {
@@ -804,15 +799,17 @@ namespace AlphaS2
                             date = dateList[i]
                         };
                         Level2 matchedLevel2 = level2Data.Find(x => x.date == dateList[i]);
+                        if (matchedLevel2 == null) { continue; }
 
                         foreach (int postDay in GlobalSetting.DAYS_FP) {
                             Level2 targetLevel2 = level2Data.Find(x => x.date == dateList[i + postDay]);
                             string colname = $@"future_price_{postDay}";
-                            thisLevel5Data.values[colname] = targetLevel2.Nprice_close;
+                            //thisLevel5Data.values[colname] = matchedLevel2.Nprice_mean!=0?
+                            //    targetLevel2.Nprice_mean / matchedLevel2.Nprice_mean
+                            //    :1;
+                            thisLevel5Data.values[colname] = Log(targetLevel2.Nprice_mean, matchedLevel2.Nprice_mean);
                         }
-
                         level5DataToInsert.Add(thisLevel5Data);
-
                     }
 
                     sql.InsertUpdateRow("level5", Level5.GetInsertData(level5DataToInsert));
@@ -823,8 +820,17 @@ namespace AlphaS2
             }
         }
 
+        //lever 6 = Future Rank
+        public static void InitializeLevel6() {
+            using (Sql sql = new Sql()) {
+                var newColumns = Level6.column;
+                sql.CreateTable("level6", newColumns);
+                sql.SetPrimaryKeys("level6", new string[] { "id", "date" });
+            }
+        }
+
+        //droppers
         public static void DropAllList() {
-            DropLevel5();
             DropStockList();
         }
         public static void DropStockList() {
@@ -858,12 +864,18 @@ namespace AlphaS2
                 sql.DropTable("level5");
             }
         }
+        public static void DropLevel6() {
+            using (Sql sql = new Sql()) {
+                sql.DropTable("level6");
+            }
+        }
 
         static decimal Ratiolize(decimal v1, decimal v2, int r1, int r2) {
             return (v1 * r1 + v2 * r2) / (r1 + r2);
         }
         static decimal Log(decimal d1, decimal d2) {
             try {
+                if (d2 == 0) return 0;
                 return Convert.ToDecimal(Math.Log((double)d1 / (double)d2)) * 100000;
             } catch {
                 return 0;

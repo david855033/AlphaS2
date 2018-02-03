@@ -18,6 +18,6 @@ namespace AlphaS2
         public static int[] DAYS_RSI = new int[] { 10, 20, 60 };
         public static int[] DAYS_DMI = new int[] { 10, 20, 60 };
         public static int[] DAYS_FP = new int[] { 5, 10, 20, 30, 40, 50, 60, 70, 80 };
-        public static int[] DAYS_FR = new int[] { 20, 40, 60 };
+        public static int[] DAYS_FR = new int[] { 20, 40, 60, 80 };
     }
 }

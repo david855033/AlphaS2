@@ -18,6 +18,8 @@ namespace AlphaS2
             StockManager.DropAllList();
             StockManager.Initialize();
 
+            StockManager.DropLevel6();
+            //StockManager.DropLevel5();
             //StockManager.DropLevel4();
             //StockManager.DropLevel3();
             //StockManager.DropLevel2();
@@ -26,6 +28,8 @@ namespace AlphaS2
             //StockManager.InitializeLevel2();
             //StockManager.InitializeLevel3();
             //StockManager.InitializeLevel4();
+            //StockManager.InitializeLevel5();
+            StockManager.InitializeLevel6();
 
             //FetchLogManager.InitializeFetchLog();
 
@@ -45,8 +49,7 @@ namespace AlphaS2
             //StockManager.GenerateLevel3(); //
 
             //StockManager.GenerateLevel4();
-
-            StockManager.GenerateLevel5();
+            //StockManager.GenerateLevel5();
 
             Console.WriteLine("End of Program.");
             Console.ReadKey(false);
