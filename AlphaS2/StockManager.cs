@@ -343,7 +343,7 @@ namespace AlphaS2
         ////傳回level1內所含的ID(distinct)
         static List<string> GetIDListLevel1() {
             //** TEST **
-            return new List<string>() { "=0050", "1101" };
+            return new List<string>() { "=0050", "1101", "1102", "1103", "1104", "1107" };
             //**
 
             var result = new List<string>();
@@ -806,7 +806,7 @@ namespace AlphaS2
                             string colname = $@"future_price_{postDay}";
                             //thisLevel5Data.values[colname] = matchedLevel2.Nprice_mean!=0?
                             //    targetLevel2.Nprice_mean / matchedLevel2.Nprice_mean
-                            //    :1;
+                            //    :1; //非log算法
                             thisLevel5Data.values[colname] = Log(targetLevel2.Nprice_mean, matchedLevel2.Nprice_mean);
                         }
                         level5DataToInsert.Add(thisLevel5Data);
@@ -828,7 +828,51 @@ namespace AlphaS2
                 sql.SetPrimaryKeys("level6", new string[] { "id", "date" });
             }
         }
+        public static void GenerateLevel6() {
+            List<string> IDList = GetIDListLevel1();
+            List<DateTime> dateList = GetDateListFetchLog();
+            Console.WriteLine($"Calculating Level6, available id = {IDList.Count}");
+            using (Sql sql = new Sql()) {
+                int currentLineCursor = Console.CursorTop;
+                int count = 0;
 
+                //**todo 縮減data範圍!
+
+                foreach (DateTime thisDate in dateList) {
+                    DataTable level5ThisDate = sql.Select("level5",
+                        new string[] { },
+                        new string[] { $@"date='{thisDate.ToString("yyyy-MM-dd")}'" }
+                        );
+                    if (level5ThisDate.Rows.Count <= 1) { continue; }
+
+                    Dictionary<string, Level6> level6Dictionary = new Dictionary<string, Level6>();
+                    foreach (DataRow row in level5ThisDate.Rows) {
+                        string id = (string)row["id"];
+                        Level6 thisLevel6 = new Level6() { id = id, date = thisDate };
+                        level6Dictionary[id] = thisLevel6;
+                    }
+
+                    foreach (int targetFRDay in GlobalSetting.DAYS_FR) {
+                        Dictionary<string, decimal> FPTable = new Dictionary<string, decimal>();
+                        foreach (DataRow row in level5ThisDate.Rows) {
+                            string id = (string)row["id"];
+                            Decimal FP = (Decimal)row[$@"future_price_{targetFRDay}"];
+                            FPTable.Add(id, FP);
+                        }
+                        var orderedFPTable = FPTable.OrderBy(x => x.Value);
+                        int i = 0;
+                        foreach (var kv in orderedFPTable) {
+                            level6Dictionary[kv.Key].values[$@"future_rank_{targetFRDay}"] = i / ((decimal)orderedFPTable.Count()-1) * 100;
+                            i++;
+                        }
+                    }
+                    List<Level6> level6DataToInsert = level6Dictionary.Values.ToList();
+                    sql.InsertUpdateRow("level6", Level6.GetInsertData(level6DataToInsert));
+                    Console.SetCursorPosition(0, currentLineCursor);
+                    Console.WriteLine($@"Calculate level 6 days: {thisDate.ToString("yyyy-MM-dd")}  ({++count}/{dateList.Count})       ");
+                }
+            }
+        }
         //droppers
         public static void DropAllList() {
             DropStockList();
