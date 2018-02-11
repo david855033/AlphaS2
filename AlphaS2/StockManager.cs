@@ -13,10 +13,6 @@ namespace AlphaS2
     {
 
         public static void Initialize() {
-            Level3.Initiate();
-            Level4.Initiate();
-            Level5.Initiate();
-            Level6.Initiate();
             InitializeStockList();
             LoadStockList();
         }
@@ -377,6 +373,18 @@ namespace AlphaS2
             var maxDateSQuery = sql.Select(table,
                        new string[] { "top 1 date" },
                         new string[] { $"id='{id}' order by date desc" });
+            if (maxDateSQuery.Rows.Count > 0) {
+                lastDate = maxDateSQuery.Rows[0][0].ToString();
+            }
+            return lastDate;
+        }
+        //取得某個table資料最後一筆的日期(以string回傳)
+        static string GetLastDate(Sql sql, string table) {
+            string lastDate = "";
+            var maxDateSQuery = sql.Select(table,
+                new string[] { "top 1 date" },
+                new string[] { },
+                  "order by date desc");
             if (maxDateSQuery.Rows.Count > 0) {
                 lastDate = maxDateSQuery.Rows[0][0].ToString();
             }
@@ -836,9 +844,31 @@ namespace AlphaS2
                 int currentLineCursor = Console.CursorTop;
                 int count = 0;
 
-                //**todo 縮減data範圍!
+                //找尋level6內最後的一天
+                String maxDateLevel6Str = GetLastDate(sql, "level6");
+                //搜尋這一天的對應datelist中的index(startDateIndex)
+                int startDateIndex = -1;
+                if (maxDateLevel6Str != "") {
+                    DateTime maxDateLevel6 = Convert.ToDateTime(maxDateLevel6Str);
+                    startDateIndex = dateList.FindIndex(x => x == maxDateLevel6);
+                }
+                //startDateIndex必須大於0
+                startDateIndex = Math.Max(0, startDateIndex);
 
-                foreach (DateTime thisDate in dateList) {
+                //找尋level5內最後的一天
+                String maxDateLevel5Str = GetLastDate(sql, "level5");
+                //endDateIndex為level5最後一天
+                int endDateIndex = -1;
+                if (maxDateLevel5Str != "") {
+                    DateTime maxDateLevel5 = Convert.ToDateTime(maxDateLevel5Str);
+                    endDateIndex = dateList.FindIndex(x => x == maxDateLevel5);
+                }
+
+                Console.WriteLine($"Calculating Level6, date need to calculate= {endDateIndex-startDateIndex}");
+
+                for (int d = startDateIndex; d < endDateIndex; d++) {
+                    DateTime thisDate = dateList[d];
+
                     DataTable level5ThisDate = sql.Select("level5",
                         new string[] { },
                         new string[] { $@"date='{thisDate.ToString("yyyy-MM-dd")}'" }
@@ -862,14 +892,14 @@ namespace AlphaS2
                         var orderedFPTable = FPTable.OrderBy(x => x.Value);
                         int i = 0;
                         foreach (var kv in orderedFPTable) {
-                            level6Dictionary[kv.Key].values[$@"future_rank_{targetFRDay}"] = i / ((decimal)orderedFPTable.Count()-1) * 100;
+                            level6Dictionary[kv.Key].values[$@"future_rank_{targetFRDay}"] = i / ((decimal)orderedFPTable.Count() - 1) * 100;
                             i++;
                         }
                     }
                     List<Level6> level6DataToInsert = level6Dictionary.Values.ToList();
                     sql.InsertUpdateRow("level6", Level6.GetInsertData(level6DataToInsert));
                     Console.SetCursorPosition(0, currentLineCursor);
-                    Console.WriteLine($@"Calculate level 6 days: {thisDate.ToString("yyyy-MM-dd")}  ({++count}/{dateList.Count})       ");
+                    Console.WriteLine($@"Calculate level 6 days: {thisDate.ToString("yyyy-MM-dd")}  ({++count}/{endDateIndex - startDateIndex})       ");
                 }
             }
         }
@@ -877,6 +907,7 @@ namespace AlphaS2
         public static void DropAllList() {
             DropStockList();
         }
+
         public static void DropStockList() {
             using (Sql sql = new Sql()) {
                 sql.DropTable("stock_list");

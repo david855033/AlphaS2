@@ -8,5 +8,6 @@ set @id='=0050';
 --select * from level2 where id = @id;
 --select * from level3 where id = @id;
 --select * from level4 where id = @id;
-select * from level5 order by date , future_price_40;
-select * from level6 order by date , future_rank_40;
+--select * from level5 order by date , future_price_80;
+select * from level6 order by date , future_rank_80;
+select * from scoreRef
