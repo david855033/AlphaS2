@@ -20,6 +20,7 @@ namespace AlphaS2
                     new SqlColumn("id","nchar(10)",false),
                     new SqlColumn("date","date",false)
                 };
+
             //BA 當日與指定時間與moving average的差距，換算成log10
             foreach (var c in new string[] { "mean", "volume" }) {
                 foreach (var d in GlobalSetting.DAYS_BA) {

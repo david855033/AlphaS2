@@ -20,6 +20,9 @@ namespace AlphaS2
         private decimal _fix;
         public decimal Fix { get => Math.Round(_fix, 4); set => _fix = value; }
 
+        private decimal _changeAbs;
+        public decimal ChangeAbs { get => Math.Round(_changeAbs, 2); set => _changeAbs = value; }
+
         private decimal _price_mean;
         public decimal Price_mean { get => Math.Round(_price_mean, 2); set => _price_mean = value; }
 
@@ -47,6 +50,7 @@ namespace AlphaS2
                 new SqlColumn("volume_per_trade","decimal(9,2)",false),
                 new SqlColumn("divide","decimal(9,4)",false),
                 new SqlColumn("fix","decimal(9,4)",false),
+                new SqlColumn("change_abs","decimal(9,4)",false),
                 new SqlColumn("price_mean","decimal(9,2)",false),
                 new SqlColumn("Nprice_mean","decimal(9,2)",false),
                 new SqlColumn("Nprice_open","decimal(9,2)",false),
@@ -67,6 +71,7 @@ namespace AlphaS2
                     volume_per_trade = (decimal)row["volume_per_trade"],
                     Divide = (decimal)row["divide"],
                     Fix = (decimal)row["fix"],
+                    ChangeAbs = (decimal)row["change_abs"],
                     Price_mean = (decimal)row["price_mean"],
                     Nprice_mean = (decimal)row["Nprice_mean"],
                     Nprice_open = (decimal)row["Nprice_open"],
@@ -84,7 +89,7 @@ namespace AlphaS2
             result.primaryKeys = new List<string>() { "id", "date" };
             foreach (var data in level2DataToInsert) {
                 result.DataList.Add(new object[] {
-                data.id, data.date,data.volume,data.volume_per_trade, data.Divide, data.Fix, data.Price_mean,
+                    data.id, data.date,data.volume,data.volume_per_trade, data.Divide, data.Fix, data.ChangeAbs, data.Price_mean,
                  data.Nprice_mean, data.Nprice_open,data.Nprice_close, data.Nprice_high,data.Nprice_low });
             }
             return result;

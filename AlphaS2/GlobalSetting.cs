@@ -21,5 +21,8 @@ namespace AlphaS2
         public static int[] DAYS_FR = new int[] { 20, 40, 60, 80 };
 
         public static int scorePercentileNumber = 3;
+
+        public static decimal threshold_MaxChange = 0.11m;
+        public static decimal threshold_MinVolume = 3000;
     }
 }

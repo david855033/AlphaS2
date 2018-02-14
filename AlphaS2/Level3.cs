@@ -17,6 +17,7 @@ namespace AlphaS2
         public decimal Nprice_mean { get => Math.Round(_Nprice_mean, 2); set => _Nprice_mean = value; }
         private decimal _Nprice_close;
         public decimal Nprice_close{ get => Math.Round(_Nprice_close, 2); set => _Nprice_close = value; }
+
         public Dictionary<string, decimal> values = new Dictionary<string, decimal>();
 
         public static List<SqlColumn> column;
@@ -54,6 +55,8 @@ namespace AlphaS2
             }
             //60交易日內成交量最小值
             newColumns.Add(new SqlColumn("min_volume_60", "decimal(19,0)", false));
+            //120交易日內absChange最大值
+            newColumns.Add(new SqlColumn("max_change_abs_120", "decimal(9,4)", false));
 
             //U, D for RSI
             foreach (var c in new string[] { "rsi_u", "rsi_d" }) {

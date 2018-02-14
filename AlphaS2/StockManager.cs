@@ -322,6 +322,9 @@ namespace AlphaS2
                                 thisLevel2Data.Nprice_open = matchLevel1Data.price_open * thisLevel2Data.Fix;
                             }
 
+                            //計算change
+                            thisLevel2Data.ChangeAbs = Math.Abs(matchLevel1Data.price_close_nonzero / lastCloseNonZero - 1);
+
                             //將資料存到last data
                             lastCloseNonZero = matchLevel1Data.price_close_nonzero;
                             lastFix = thisLevel2Data.Fix;
@@ -513,7 +516,11 @@ namespace AlphaS2
                             var selectedLevel2Data = level2Data.Skip(selectedLevel2Index - 60 + 1).Take(60);
                             thisLevel3Data.values["min_volume_60"] = selectedLevel2Data.Select(x => x.volume).Min();
                         }
-
+                        //120天內change_abs最大值
+                        {
+                            var selectedLevel2Data = level2Data.Skip(selectedLevel2Index - 120 + 1).Take(120);
+                            thisLevel3Data.values["max_change_abs_120"] = selectedLevel2Data.Select(x => x.ChangeAbs).Max();
+                        }
                         //RSI的 U D
                         {
                             var thisU = Math.Max(0,
