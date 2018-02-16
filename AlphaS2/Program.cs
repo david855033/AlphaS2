@@ -12,7 +12,7 @@ namespace AlphaS2
 
 
         static void Main(string[] args) {
-            const bool reset = true;
+            const bool reset = false;
             const bool fullReset = false;
             FileWriter.CheckDirectory();
 

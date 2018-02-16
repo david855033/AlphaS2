@@ -20,9 +20,10 @@ namespace AlphaS2
         public static int[] DAYS_FP = new int[] { 5, 10, 20, 30, 40, 50, 60, 70, 80 };
         public static int[] DAYS_FR = new int[] { 20, 40, 60, 80 };
 
-        public static int scorePercentileNumber = 3;
+        public static int SCORE_Partition = 3;
 
         public static decimal threshold_MaxChange = 0.11m;
         public static decimal threshold_MinVolume = 3000;
+
     }
 }

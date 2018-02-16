@@ -518,8 +518,12 @@ namespace AlphaS2
                         }
                         //120天內change_abs最大值
                         {
-                            var selectedLevel2Data = level2Data.Skip(selectedLevel2Index - 120 + 1).Take(120);
-                            thisLevel3Data.values["max_change_abs_120"] = selectedLevel2Data.Select(x => x.ChangeAbs).Max();
+                            if (i != 0) {
+                                var selectedLevel2Data = level2Data.Skip(selectedLevel2Index - 120 + 1).Take(120);
+                                thisLevel3Data.values["max_change_abs_120"] = selectedLevel2Data.Select(x => x.ChangeAbs).Max();
+                            } else {
+                                thisLevel3Data.values["max_change_abs_120"] = 0;
+                            }
                         }
                         //RSI的 U D
                         {
@@ -616,7 +620,7 @@ namespace AlphaS2
                     string dateCondition = startDateIndex - BACK_DAYS >= 0 ?
                         $"date > '{dateList[startDateIndex - BACK_DAYS].ToString("yyyy-MM-dd")}'" :
                         $"date >= '{GlobalSetting.START_DATE.ToString("yyyy-MM-dd")}'";   //含第一筆
-                    //選取level3內資料(起點要回推60日) 至最新的資料
+                                                                                          //選取level3內資料(起點要回推60日) 至最新的資料
                     DataTable dataTableLevel3 = sql.Select("level3",
                         Level3.column.Select(x => x.name).ToArray(),
                         new string[] { $"id='{id}'",
@@ -871,7 +875,7 @@ namespace AlphaS2
                     endDateIndex = dateList.FindIndex(x => x == maxDateLevel5);
                 }
 
-                Console.WriteLine($"Calculating Level6, date need to calculate= {endDateIndex-startDateIndex}");
+                Console.WriteLine($"Calculating Level6, date need to calculate= {endDateIndex - startDateIndex}");
 
                 for (int d = startDateIndex; d < endDateIndex; d++) {
                     DateTime thisDate = dateList[d];
