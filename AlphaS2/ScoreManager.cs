@@ -21,11 +21,12 @@ namespace AlphaS2
             }
         }
         public static void GenerateScoreTable() {
-            Console.WriteLine($@"Generating Score Table");
+            Console.WriteLine($@"Generating Score Reference Table");
             List<ScoreField> fields = GenerateFeatureField();
             List<ScoreField> FPFields = GenerateFuturePriceField();
             List<ScoreField> FRFields = GenerateFutureRankField();
 
+            Console.WriteLine($@"Fields to calculate: {fields.Count}, loading data from SQL server....");
             using (Sql sql = new Sql()) {
                 DataTable queryResult =
                     sql.Select("level6",
@@ -40,6 +41,8 @@ namespace AlphaS2
                         and max_change_abs_120 <= {GlobalSetting.threshold_MaxChange}");
 
                 //轉存至datalist
+                int currentPosition = Console.CursorTop;
+                Console.WriteLine($@"Transform Data...");
                 List<decimal[]> dataList = new List<decimal[]>();
                 foreach (DataRow row in queryResult.Rows) {
                     var newRow = new decimal[queryResult.Columns.Count];
@@ -48,7 +51,14 @@ namespace AlphaS2
                         newRow[i++] = (decimal)row[column];
                     }
                     dataList.Add(newRow);
+                    if (i % 100 == 0) { 
+                        Console.CursorTop= currentPosition;
+                        Console.WriteLine($@"Transform Data...{i}00/{queryResult.Rows.Count}         ");
+                    }
                 }
+                Console.CursorTop = currentPosition;
+                Console.WriteLine($@"Transform Data...{queryResult.Rows.Count}/{queryResult.Rows.Count}         ");
+
                 List<string> colNames = new List<string>();
                 foreach (DataColumn column in queryResult.Columns) {
                     colNames.Add(column.ToString());
@@ -58,11 +68,18 @@ namespace AlphaS2
                 double p = (double)dataList.Count / GlobalSetting.SCORE_Partition;
                 int p_int = Convert.ToInt32(Math.Round(p));
                 List<ScoreRef> ScoreDataToInsert = new List<ScoreRef>();
+
+                currentPosition = Console.CursorTop;
+                int count = 0;
                 //依據各field排序 並計算partition內FP FR平均值
                 foreach (var field in fields.Select(x => x.fieldName)) {
+                    Console.CursorTop= currentPosition;
+                    Console.WriteLine($@"Caculating Field: {field} ({++count}/{fields.Count})                   ");
                     int index = colNames.IndexOf(field);
                     var orderedList = dataList.OrderBy(x => x[index]);
                     for (int i = 0; i < GlobalSetting.SCORE_Partition; i++) {
+                        Console.CursorTop = currentPosition+1;
+                        Console.WriteLine($@"   Partition: {i+1}/{GlobalSetting.SCORE_Partition}");
                         int startPosition = Convert.ToInt32(Math.Round(p * i));
 
                         ScoreRef newScoreData = new ScoreRef() {
@@ -84,7 +101,7 @@ namespace AlphaS2
                         ScoreDataToInsert.Add(newScoreData);
                     }
                 }
-
+                Console.WriteLine("Score Reference Calculation Done");
                 sql.InsertUpdateRow("scoreRef", ScoreRef.GetInsertData(ScoreDataToInsert));
             }
 

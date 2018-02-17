@@ -14,6 +14,9 @@ namespace AlphaS2
         static void Main(string[] args) {
             const bool reset = false;
             const bool fullReset = false;
+            const bool doDownload = false;
+            const bool resetScoreRef = false;
+            const bool generateRoutine = false;
             FileWriter.CheckDirectory();
 
             InitializeDTO();
@@ -35,25 +38,29 @@ namespace AlphaS2
                 StockManager.InitializeLevel3(); //
                 StockManager.InitializeLevel4(); //
                 StockManager.InitializeLevel5(); //
-                StockManager.InitializeLevel6();
+                StockManager.InitializeLevel6(); //
             }
+            StockManager.DropLevel7();
+            StockManager.InitializeLevel7();
 
             if (fullReset) {
                 FetchLogManager.InitializeFetchLog(); //
             }
 
-            List<DateTime> downloadDatesA = FetchLogManager.GetDownloadDates('A');
-            List<DateTime> downloadDatesB = FetchLogManager.GetDownloadDates('B');
-            List<DateTime> downloadDatesZ = FetchLogManager.GetDownloadDates('Z');
-            Task.WaitAll(new[] {
+            if (doDownload) {
+                List<DateTime> downloadDatesA = FetchLogManager.GetDownloadDates('A');
+                List<DateTime> downloadDatesB = FetchLogManager.GetDownloadDates('B');
+                List<DateTime> downloadDatesZ = FetchLogManager.GetDownloadDates('Z');
+                Task.WaitAll(new[] {
                     Task.Factory.StartNew(() =>  {
                         Downloader.LoadDates(downloadDatesA, 'A', 2000);
                         Downloader.LoadDates(downloadDatesZ, 'Z', 3000);
                     }),
                     Task.Factory.StartNew(() =>  Downloader.LoadDates(downloadDatesB, 'B', 2000))
                 });
+            }
 
-            if (true) {  //測試時候省略
+            if (generateRoutine) {  //測試時候省略
                 StockManager.GenerateLevel1();
                 StockManager.GenerateLevel2();
                 StockManager.GenerateLevel3();
@@ -62,10 +69,13 @@ namespace AlphaS2
                 StockManager.GenerateLevel6();
             }
 
-            ScoreManager.DropScoreRef();
-            ScoreManager.InitializeScoreRef();
-            ScoreManager.GenerateScoreTable();
+            if (resetScoreRef) {
+                ScoreManager.DropScoreRef();
+                ScoreManager.InitializeScoreRef();
+                ScoreManager.GenerateScoreTable();
+            }
 
+            StockManager.GenerateLevel7();
 
             Console.WriteLine("End of Program.");
             Console.ReadKey(false);
@@ -77,6 +87,7 @@ namespace AlphaS2
             Level4.Initiate();
             Level5.Initiate();
             Level6.Initiate();
+            Level7.Initiate();
             ScoreRef.Initiate();
         }
     }

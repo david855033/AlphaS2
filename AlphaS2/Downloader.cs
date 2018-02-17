@@ -84,7 +84,7 @@ namespace AlphaS2
             return responseString;
         }
         public static void LoadDates(List<DateTime> thisDates, char type, int timeOut = 0) {
-            Console.WriteLine($@"loading {thisDates.Count} day(s)...");
+            Console.WriteLine($@"downloading {thisDates.Count} day(s)...");
             int count = 0;
             foreach (var d in thisDates) {
                 Console.WriteLine($@"{++count}/{thisDates.Count}");

@@ -587,7 +587,6 @@ namespace AlphaS2
             }
         }
 
-
         //level4 為進入計算的資料
         public static void InitializeLevel4() {
             using (Sql sql = new Sql()) {
@@ -914,11 +913,26 @@ namespace AlphaS2
                 }
             }
         }
+
+        //level 7 = calculated Score
+        public static void InitializeLevel7() {
+            using (Sql sql = new Sql()) {
+                var newColumns = Level7.column;
+                sql.CreateTable("level7", newColumns);
+                sql.SetPrimaryKeys("level7", new string[] { "id", "date" });
+            }
+        }
+        public static void GenerateLevel7() {
+            List<string> IDList = GetIDListLevel1();
+            List<DateTime> dateList = GetDateListFetchLog();
+            Console.WriteLine($"Calculating Level7, available id = {IDList.Count}");
+        }
+
+
         //droppers
         public static void DropAllList() {
             DropStockList();
         }
-
         public static void DropStockList() {
             using (Sql sql = new Sql()) {
                 sql.DropTable("stock_list");
@@ -953,6 +967,11 @@ namespace AlphaS2
         public static void DropLevel6() {
             using (Sql sql = new Sql()) {
                 sql.DropTable("level6");
+            }
+        }
+        public static void DropLevel7() {
+            using (Sql sql = new Sql()) {
+                sql.DropTable("level7");
             }
         }
 
