@@ -9,6 +9,7 @@ namespace AlphaS2
 {
     class Level1 {
         public string id;
+        public string name;
         public DateTime date;
         public decimal deal;
         public decimal amount;
@@ -24,6 +25,7 @@ namespace AlphaS2
         public static List<SqlColumn> column =
           new List<SqlColumn> {
                 new SqlColumn("id","nchar(10)",false),
+                new SqlColumn("name","nchar(20)",false),
                 new SqlColumn("date","date",false),
                 new SqlColumn("deal","decimal(19,0)",false),
                 new SqlColumn("amount","decimal(19,0)",false),
@@ -42,6 +44,7 @@ namespace AlphaS2
             foreach (DataRow row in dataTableLevel1.Rows) {
                 result.Add(new Level1() {
                     id = ((string)row["id"]).Trim(),
+                    name = ((string)row["name"]).Trim(),
                     date = (DateTime)row["date"],
                     deal = (decimal)row["deal"],
                     amount = (decimal)row["amount"],

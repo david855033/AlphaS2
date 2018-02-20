@@ -12,11 +12,14 @@ namespace AlphaS2
 
 
         static void Main(string[] args) {
-            const bool reset = false;
-            const bool fullReset = false;
-            const bool doDownload = false;
+            const bool reset = true;
+            const bool resetFetchLog = true;
+            const bool resetLevel1 = true;
+            const bool doDownload = true;
+            const bool generateRoutine = true;
             const bool resetScoreRef = false;
-            const bool generateRoutine = false;
+            const bool doLevel7 = false;
+
             FileWriter.CheckDirectory();
 
             InitializeDTO();
@@ -25,12 +28,13 @@ namespace AlphaS2
             //StockManager.Initialize();
 
             if (reset) {
+                StockManager.DropLevel7();
                 StockManager.DropLevel6();
                 StockManager.DropLevel5(); //
                 StockManager.DropLevel4(); //
                 StockManager.DropLevel3(); //
                 StockManager.DropLevel2(); //
-                if (fullReset) {
+                if (resetLevel1) {
                     StockManager.DropLevel1(); //
                     StockManager.InitializeLevel1(); //
                 }
@@ -39,24 +43,23 @@ namespace AlphaS2
                 StockManager.InitializeLevel4(); //
                 StockManager.InitializeLevel5(); //
                 StockManager.InitializeLevel6(); //
+                StockManager.InitializeLevel7();
             }
-            StockManager.DropLevel7();
-            StockManager.InitializeLevel7();
-
-            if (fullReset) {
+          
+            if (resetFetchLog) {
                 FetchLogManager.InitializeFetchLog(); //
             }
 
             if (doDownload) {
-                List<DateTime> downloadDatesA = FetchLogManager.GetDownloadDates('A');
-                List<DateTime> downloadDatesB = FetchLogManager.GetDownloadDates('B');
-                List<DateTime> downloadDatesZ = FetchLogManager.GetDownloadDates('Z');
+                List<DateTime> downloadDatesA = FetchLogManager.GetDownloadDates('A'); //上市
+                List<DateTime> downloadDatesB = FetchLogManager.GetDownloadDates('B'); //上櫃
+                List<DateTime> downloadDatesZ = FetchLogManager.GetDownloadDates('Z'); //上櫃除權息
                 Task.WaitAll(new[] {
                     Task.Factory.StartNew(() =>  {
-                        Downloader.LoadDates(downloadDatesA, 'A', 2000);
-                        Downloader.LoadDates(downloadDatesZ, 'Z', 3000);
+                        Downloader.LoadDates(downloadDatesA, 'A', 4000);
+                        Downloader.LoadDates(downloadDatesZ, 'Z', 5000);
                     }),
-                    Task.Factory.StartNew(() =>  Downloader.LoadDates(downloadDatesB, 'B', 2000))
+                    Task.Factory.StartNew(() =>  Downloader.LoadDates(downloadDatesB, 'B', 3000))
                 });
             }
 
@@ -75,7 +78,9 @@ namespace AlphaS2
                 ScoreManager.GenerateScoreTable();
             }
 
-            StockManager.GenerateLevel7();
+            if (doLevel7) {
+                StockManager.GenerateLevel7();
+            }
 
             Console.WriteLine("End of Program.");
             Console.ReadKey(false);

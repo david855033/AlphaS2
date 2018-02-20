@@ -85,6 +85,7 @@ namespace AlphaS2
                         .Select(x => x.Value.Replace(",", "").Replace("\"", "")).ToArray();
 
                     string id = dataFields[0].Trim();
+                    string name = dataFields[1].Trim();
                     string deal = "", amount = "", price_open = "", price_close = "", nonZeroClose = "", price_high = "", price_low = "", price_ref_nextday = "", trade = "";
 
                     if (f.type == 'A') {
@@ -136,6 +137,7 @@ namespace AlphaS2
 
                     insertData.AddData(new object[] {
                             id, //id
+                            name, //name
                             dateString,   //date
                             deal,   //deal
                             amount,   //amount
@@ -213,7 +215,7 @@ namespace AlphaS2
             }
         }
         public static void GenerateLevel2() {
-            List<string> IDList = GetIDListLevel1();
+            List<string> IDList = GetIDList();
             List<DateTime> dateList = GetDateListFetchLog();
             Console.WriteLine($"Calculating Level2, available id = {IDList.Count}");
             using (Sql sql = new Sql()) {
@@ -273,7 +275,8 @@ namespace AlphaS2
                             Nprice_low = 0,
                             Nprice_mean = 0,
                             Nprice_open = 0,
-                            Price_mean = 0
+                            Price_mean = 0,
+                            ChangeAbs = 100
                         };
 
 
@@ -322,8 +325,10 @@ namespace AlphaS2
                                 thisLevel2Data.Nprice_open = matchLevel1Data.price_open * thisLevel2Data.Fix;
                             }
 
-                            //計算change
-                            thisLevel2Data.ChangeAbs = Math.Abs(matchLevel1Data.price_close_nonzero / lastCloseNonZero - 1);
+                            //計算change (預設值100，如果沒有對應資料會留預設值)
+                            if (i > 0) {
+                                thisLevel2Data.ChangeAbs = Math.Abs(matchLevel1Data.price_close_nonzero / lastCloseNonZero - 1);
+                            }
 
                             //將資料存到last data
                             lastCloseNonZero = matchLevel1Data.price_close_nonzero;
@@ -340,12 +345,12 @@ namespace AlphaS2
             }
         }
         ////傳回level1內所含的ID(distinct)
-        static List<string> GetIDListLevel1() {
-            //** TEST **
-            return new List<string>() { "=0050", "1101", "1102", "1103", "1104", "1107" };
-            //**
+        static List<string> GetIDList() {
 
             var result = new List<string>();
+            //**
+            //return new List<string>() { "=0050", "1101", "1102", "1103", "1104", "1105" };
+            //**
             using (Sql sql = new Sql()) {
                 var resultTable = sql.SelectDistinct("level1",
                     new string[] { "id" }, "order by id");
@@ -353,7 +358,8 @@ namespace AlphaS2
                     result.Add(resultTable.Rows[i][0].ToString().Trim());
                 }
             }
-
+            result = result.Where(x => x.Length == 4 && (!x.StartsWith("="))).ToList();
+            result.Add("=0050");
             return result;
         }
         //傳回fetch_log內所含的date(dinstinct)
@@ -414,7 +420,7 @@ namespace AlphaS2
             }
         }
         public static void GenerateLevel3() {
-            List<string> IDList = GetIDListLevel1();
+            List<string> IDList = GetIDList();
             List<DateTime> dateList = GetDateListFetchLog();
             Console.WriteLine($"Calculating Level3, available id = {IDList.Count}");
             using (Sql sql = new Sql()) {
@@ -596,7 +602,7 @@ namespace AlphaS2
             }
         }
         public static void GenerateLevel4() {
-            List<string> IDList = GetIDListLevel1();
+            List<string> IDList = GetIDList();
             List<DateTime> dateList = GetDateListFetchLog();
             Console.WriteLine($"Calculating Level4, available id = {IDList.Count}");
             using (Sql sql = new Sql()) {
@@ -652,10 +658,10 @@ namespace AlphaS2
                         //計算BA
                         foreach (var d in GlobalSetting.DAYS_BA) {
                             thisLevel4Data.values[$@"ba_mean_{d}"] =
-                                Log(matchedLevel3Data.values[$@"ma_mean_{d}"], matchedLevel3Data.Nprice_mean);
+                                Log(matchedLevel3Data.Nprice_mean, matchedLevel3Data.values[$@"ma_mean_{d}"]);
 
                             thisLevel4Data.values[$@"ba_volume_{d}"] =
-                                Log(matchedLevel3Data.values[$@"ma_volume_{d}"], matchedLevel3Data.volume);
+                                Log(matchedLevel3Data.volume, matchedLevel3Data.values[$@"ma_volume_{d}"]);
                         }
 
                         //MACD: dif-dem 
@@ -771,7 +777,7 @@ namespace AlphaS2
             }
         }
         public static void GenerateLevel5() {
-            List<string> IDList = GetIDListLevel1();
+            List<string> IDList = GetIDList();
             List<DateTime> dateList = GetDateListFetchLog();
             Console.WriteLine($"Calculating Level5, available id = {IDList.Count}");
             using (Sql sql = new Sql()) {
@@ -847,7 +853,7 @@ namespace AlphaS2
             }
         }
         public static void GenerateLevel6() {
-            List<string> IDList = GetIDListLevel1();
+            List<string> IDList = GetIDList();
             List<DateTime> dateList = GetDateListFetchLog();
             Console.WriteLine($"Calculating Level6, available id = {IDList.Count}");
             using (Sql sql = new Sql()) {
@@ -923,9 +929,86 @@ namespace AlphaS2
             }
         }
         public static void GenerateLevel7() {
-            List<string> IDList = GetIDListLevel1();
+            List<string> IDList = GetIDList();
             List<DateTime> dateList = GetDateListFetchLog();
             Console.WriteLine($"Calculating Level7, available id = {IDList.Count}");
+            using (Sql sql = new Sql()) {
+                int currentLineCursor = Console.CursorTop;
+                int count = 0;
+
+                var fields = Level4.column.Select(x => x.name).Where(x => x != "id" && x != "date");
+                var scoreFields = Level7.column.Select(x => x.name).Where(x => x != "id" && x != "date");
+                //載入ScoreRef
+                List<ScoreRef> scoreRefData = ScoreRef.DataAdaptor(sql.Select("scoreref"));
+                //建立Dictionary
+                Dictionary<string, List<ScoreRef>> scoreRef = new Dictionary<string, List<ScoreRef>>();
+                Dictionary<string, decimal[]> scoreRefBS = new Dictionary<string, decimal[]>();
+                foreach (var field in fields) {
+                    var currentScoreRef = scoreRefData
+                            .Where(x => x.fieldName == field)
+                            .OrderBy(x => x.percentileIndex)
+                            .ToList();
+                    scoreRef.Add(field, currentScoreRef);
+                    scoreRefBS.Add(field, currentScoreRef.Select(x => x.Threshold).ToArray());
+                }
+
+                //開始計算level7 by id
+                foreach (string id in IDList) {
+                    //找尋level7內最後的一天
+                    String maxDateLevel7Str = GetLastDate(sql, "level7", id);
+                    //搜尋這一天的對應datelist中的index(startDateIndex)
+                    int startDateIndex = -1;
+                    if (maxDateLevel7Str != "") {
+                        DateTime maxDateLevel7 = Convert.ToDateTime(maxDateLevel7Str);
+                        startDateIndex = dateList.FindIndex(x => x == maxDateLevel7);
+                    }
+                    //startDateIndex必須大於0
+                    startDateIndex = Math.Max(0, startDateIndex);
+
+                    string dateCondition = $"date > '{dateList[startDateIndex].ToString("yyyy-MM-dd")}'";
+                    DataTable dataTableLevel4 = sql.Select("level4",
+                    Level4.column.Select(x => x.name).ToArray(),
+                     new string[] { $"id='{id}'",
+                                     dateCondition}
+                    );
+                    List<Level4> level4Data = Level4.DataAdaptor(dataTableLevel4);
+
+                    //算出level7 並更新sql 
+                    List<Level7> level7DataToInsert = new List<Level7>();
+                    for (int i = startDateIndex; i < dateList.Count; i++) {
+                        Level4 matchedLevel4Data = level4Data.Find(x => x.date == dateList[i]);
+                        Level7 thisLevel7Data = new Level7() {
+                            id = id,
+                            date = dateList[i]
+                        };
+                        if (matchedLevel4Data == null) {
+                            continue;
+                        }
+
+                        decimal[] scoreValuesBin = new decimal[scoreFields.Count()];
+                        //計算各field
+                        foreach (var field in fields) {
+                            var value = matchedLevel4Data.values[field];
+                            var bs = Array.BinarySearch(scoreRefBS[field], value);
+                            if (bs < 0) { bs = ~bs; }
+                            if (bs == 0) { bs = 1; }
+                            for (int k = 0; k < scoreFields.Count(); k++) {
+                                scoreValuesBin[k] += scoreRef[field][bs - 1].values.ElementAt(k).Value;
+                            }
+                        }
+                        //取得平均值
+                        scoreValuesBin = scoreValuesBin.Select(x => x / fields.Count()).ToArray();
+                        for (int k = 0; k < scoreFields.Count(); k++) {
+                            thisLevel7Data.values[scoreFields.ElementAt(k)] = scoreValuesBin[k];
+                        }
+                        level7DataToInsert.Add(thisLevel7Data);
+                    }
+
+                    sql.InsertUpdateRow("level7", Level7.GetInsertData(level7DataToInsert));
+                    Console.SetCursorPosition(0, currentLineCursor);
+                    Console.WriteLine($@"Calculate level 7 id: {id}  ({++count}/{IDList.Count})       ");
+                }
+            }
         }
 
 

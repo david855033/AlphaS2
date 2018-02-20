@@ -37,17 +37,26 @@ namespace AlphaS2
             } else {
                 HttpWebRequest req = (HttpWebRequest)HttpWebRequest.Create(url);
                 req.Method = "GET";
-                using (WebResponse response = req.GetResponse()) {
-                    Console.WriteLine($"fetching {url} ...");
+                int attempt = 3;
+                while (attempt > 0) {
+                    try {
+                        using (WebResponse response = req.GetResponse()) {
+                            Console.WriteLine($"fetching {url} ...");
 
-                    var receiveStream = response.GetResponseStream();
-                    StreamReader readStream = new StreamReader(receiveStream, Encoding.Default);
+                            var receiveStream = response.GetResponseStream();
+                            StreamReader readStream = new StreamReader(receiveStream, Encoding.Default);
 
-                    Console.WriteLine("Response stream received.");
-                    responseString = readStream.ReadToEnd();
+                            Console.WriteLine("Response stream received.");
+                            responseString = readStream.ReadToEnd();
 
-                    response.Close();
-                    readStream.Close();
+                            response.Close();
+                            readStream.Close();
+                            attempt = 0;
+                        }
+                    } catch (Exception e) {
+                        if (attempt <= 0) { throw e; }
+                        attempt--;
+                    }
                 }
                 if (timeOut > 0) {
                     Thread.Sleep(timeOut);

@@ -40,9 +40,13 @@ namespace AlphaS2
             foreach (DataRow row in scoreRefTable.Rows) {
                 var newScoreRefField = new ScoreRef() {
                     fieldName = ((string)row["fieldname"]).Trim(),
-                    percentileIndex = (int)row["percentileIndex"],
+                    percentileIndex = Convert.ToInt32(row["percentileIndex"]),
                     Threshold = (decimal)row["threshold"]
                 };
+                foreach (string c in column.Select(x => x.name)
+                    .Where(x => x != "fieldname" && x != "percentileIndex" && x != "threshold")) {
+                    newScoreRefField.values[c] = (decimal)row[c];
+                }
                 result.Add(newScoreRefField);
             }
             return result;
