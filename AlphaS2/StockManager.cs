@@ -50,7 +50,9 @@ namespace AlphaS2
             }
         }
         public static void GenerateLevel1() {
-            List<FetchLog> fetchLog = FetchLogManager.GetFileListToUpload();
+            List<FetchLog> fetchLog = FetchLogManager.GetFileListToUpload()
+                .Where(x=>x.date>=GlobalSetting.START_CAL_DATE).ToList();
+            Console.WriteLine($@"{fetchLog.Count()} file(s) to upload to Level1.");
             Dictionary<string, string> lastCloseSet = new Dictionary<string, string>();
             int currentLineCursor = Console.CursorTop;
             foreach (var f in fetchLog) {
@@ -887,7 +889,8 @@ namespace AlphaS2
 
                     DataTable level5ThisDate = sql.Select("level5",
                         new string[] { },
-                        new string[] { $@"date='{thisDate.ToString("yyyy-MM-dd")}'" }
+                        new string[] { $@"date='{thisDate.ToString("yyyy-MM-dd")}'",
+                        "((len(id) = 4 and SUBSTRING(id,0,1) != '=') or id = '=0050')"}
                         );
                     if (level5ThisDate.Rows.Count <= 1) { continue; }
 

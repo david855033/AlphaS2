@@ -15,10 +15,10 @@ set @date = '2007-1-1'
 --select * from level6 where date >= @date order by date , future_rank_80 ;
 --select * from level7;
 --select * from scoreRef
---select * from level6
+select * from level5 where ((len(id) = 4 and SUBSTRING(id,0,1) != '=') or id = '=0050') and date = '2007-08-02'
 --join level3 on level6.id=level3.id and level6.date=level3.date
 --join level4 on level6.id=level4.id and level6.date=level4.date
 --join level5 on level6.id=level5.id and level6.date=level5.date
 --order by ba_mean_3
 
-select id, count(id), max(date) as max, min(date) as min from level1 group by id order by id
+--select id, count(id), max(date) as max, min(date) as min from level1 group by id order by id

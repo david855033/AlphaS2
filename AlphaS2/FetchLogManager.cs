@@ -45,8 +45,8 @@ namespace AlphaS2
             return resultList;
         }
         public static List<FetchLog> GetFileListToUpload() {
-            var result = GetFetchLog(new[] { "uploaded = 0", "empty = 0", "uploaded = 0" });
-            Console.WriteLine($@"get {result.Count} file(s) need to upload to level 1...");
+            var result = GetFetchLog(new[] { "uploaded = 0", "empty = 0" });
+
             return result;
         }
 
