@@ -51,7 +51,10 @@ namespace AlphaS2
         }
         public static void GenerateLevel1() {
             List<FetchLog> fetchLog = FetchLogManager.GetFileListToUpload()
-                .Where(x=>x.date>=GlobalSetting.START_CAL_DATE).ToList();
+                .Where(x => x.date >= GlobalSetting.START_CAL_DATE)
+                .OrderBy(x => x.date)
+                .OrderBy(x => x.type)
+                .ToList();
             Console.WriteLine($@"{fetchLog.Count()} file(s) to upload to Level1.");
             Dictionary<string, string> lastCloseSet = new Dictionary<string, string>();
             int currentLineCursor = Console.CursorTop;
