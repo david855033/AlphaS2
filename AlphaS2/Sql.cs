@@ -17,6 +17,7 @@ namespace AlphaS2
         private void CreateConnection() {
             connection = new SqlConnection(connectionStr);
             connection.Open();
+
             connection.InfoMessage += Connection_InfoMessage;
         }
         public void Dispose() {
@@ -36,6 +37,7 @@ namespace AlphaS2
                     PRINT 'SUCCESS'
                     END ELSE PRINT 'FAIL'";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.CommandTimeout = 0;
                 sqlCommand.ExecuteNonQuery();
                 if (infoMessage == "SUCCESS") {
                     Console.WriteLine($"SQL: create table: {table}, Columns({column.Count()})");
@@ -54,6 +56,7 @@ namespace AlphaS2
                     PRINT 'SUCCESS'
                     END ELSE PRINT 'FAIL'";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.CommandTimeout = 0;
                 sqlCommand.ExecuteNonQuery();
                 if (infoMessage == "SUCCESS") {
                     Console.WriteLine($"SQL: drop table: {table}");
@@ -72,6 +75,7 @@ namespace AlphaS2
                     PRINT 'SUCCESS'
                     END ELSE PRINT 'FAIL'";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.CommandTimeout = 0;
                 sqlCommand.ExecuteNonQuery();
                 if (infoMessage == "SUCCESS") {
                     Console.WriteLine($"SQL: Set Primary Key, table: {table}, Column: {column}");
@@ -88,6 +92,7 @@ namespace AlphaS2
                 string commandStr = $@"ALTER TABLE {table}
                     ADD CONSTRAINT PK_{table}_{String.Join("_", columns)} PRIMARY KEY ({String.Join(",", columns)});";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.CommandTimeout = 0;
                 sqlCommand.ExecuteNonQuery();
                 Console.WriteLine($"SQL: Set Constraint Primary Key, table: {table}, columns: {String.Join(",", columns)}");
             } catch (Exception e) {
@@ -107,6 +112,7 @@ namespace AlphaS2
                     AND [parent_object_id] = OBJECT_ID(@table);
                     EXEC sp_executeSQL @sql;";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.CommandTimeout = 0;
                 sqlCommand.ExecuteNonQuery();
                 Console.WriteLine($"SQL: Drop Primary Key,table: {table}");
             } catch (Exception e) {
@@ -121,6 +127,7 @@ namespace AlphaS2
                     PRINT 'SUCCESS'
                     END ELSE PRINT 'FAIL'";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.CommandTimeout = 0;
                 sqlCommand.ExecuteNonQuery();
                 if (infoMessage == "SUCCESS") {
                     Console.WriteLine($"SQL: Set Foreign Key, table: {table}, Column: {column}");
@@ -136,6 +143,7 @@ namespace AlphaS2
             try {
                 string commandStr = $@"ALTER TABLE {table} ADD FOREIGN KEY({String.Join(",", columns)}) REFERENCES {refTable}({String.Join(",", refColumns)});";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.CommandTimeout = 0;
                 sqlCommand.ExecuteNonQuery();
                 if (infoMessage == "SUCCESS") {
                     Console.WriteLine($"SQL: Set Foreign Key, table: {table}, Column: {String.Join(",", columns)}");
@@ -154,6 +162,7 @@ namespace AlphaS2
                     PRINT 'SUCCESS'
                     END ELSE PRINT 'FAIL'";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.CommandTimeout = 0;
                 sqlCommand.ExecuteNonQuery();
                 if (infoMessage == "SUCCESS") {
                     Console.WriteLine($"SQL: Add Column, table: {table}, Column: {column.name}");
@@ -172,6 +181,7 @@ namespace AlphaS2
                     PRINT 'SUCCESS'
                     END ELSE PRINT 'FAIL'";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.CommandTimeout = 0;
                 sqlCommand.ExecuteNonQuery();
                 if (infoMessage == "SUCCESS") {
                     Console.WriteLine($"SQL: Drop Column, table: {table}, Column: {column}");
@@ -185,9 +195,11 @@ namespace AlphaS2
         //新增資料
         public bool InsertUpdateRow(string table, SqlInsertData insertData) {
             string lastData = "";
+            if (insertData.DataList.Count() == 0) { return false; }
             try {
                 string commandStr = insertData.GetInsertQuery(table);
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.CommandTimeout = 0;
                 insertData.AddCmdParameters(sqlCommand);
                 var ColumnList = insertData.ColumnList;
                 var dataList = insertData.DataList;
@@ -216,6 +228,7 @@ namespace AlphaS2
                         set {String.Join(",", setKeyValue.Keys.Select(x => x + "=" + setKeyValue[x]))}
                         where {String.Join(" and ", condition)}";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.CommandTimeout = 0;
                 sqlCommand.ExecuteNonQuery();
                 //Console.WriteLine($"SQL: Update Row, table: {table}");
             } catch (Exception e) {
@@ -230,6 +243,7 @@ namespace AlphaS2
                 string commandStr = $@"DELETE FROM {table}
                     WHERE {String.Join(" and ", condition)};";
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.CommandTimeout = 0;
                 sqlCommand.ExecuteNonQuery();
 
                 //Console.WriteLine($"SQL: Delete Row, table: {table}");
@@ -245,7 +259,7 @@ namespace AlphaS2
         }
         public DataTable Select(string table, string[] column, string other = "") {
             var emptyStringArray = new string[] { };
-            return Select(table, column, emptyStringArray,other);
+            return Select(table, column, emptyStringArray, other);
         }
         public DataTable Select(string table, string[] column, string[] condition, string other = "") {
             try {
@@ -254,9 +268,10 @@ namespace AlphaS2
                     : string.Join(",", column)) +
                     $@" FROM {table}" +
                     (condition.Length > 0 ?
-                        $@" WHERE {String.Join(" and ", condition)}" : "")+ " "+
+                        $@" WHERE {String.Join(" and ", condition)}" : "") + " " +
                         other;
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.CommandTimeout = 0;
                 DataTable dataTable = new DataTable();
                 SqlDataAdapter dataAdapter = new SqlDataAdapter(sqlCommand);
                 dataAdapter.Fill(dataTable);
@@ -280,6 +295,7 @@ namespace AlphaS2
                         $@" WHERE {String.Join(" and ", condition)}" : "") +
                         " " + other;
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);
+                sqlCommand.CommandTimeout = 0;
                 DataTable dataTable = new DataTable();
                 SqlDataAdapter dataAdapter = new SqlDataAdapter(sqlCommand);
                 dataAdapter.Fill(dataTable);

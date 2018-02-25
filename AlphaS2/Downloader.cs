@@ -32,7 +32,7 @@ namespace AlphaS2
             if (fileExist) {
                 using (StreamReader sr = new StreamReader(filePath, Encoding.Default)) {
                     responseString = sr.ReadToEnd();
-                    Console.WriteLine($@"existed file: {filePath}");
+                    Console.WriteLine($@"existed file: {filePath}      ");
                 }
             } else {
                 HttpWebRequest req = (HttpWebRequest)HttpWebRequest.Create(url);
@@ -41,12 +41,12 @@ namespace AlphaS2
                 while (attempt > 0) {
                     try {
                         using (WebResponse response = req.GetResponse()) {
-                            Console.WriteLine($"fetching {url} ...");
+                            Console.Write($"fetching {url} ...     ");
 
                             var receiveStream = response.GetResponseStream();
                             StreamReader readStream = new StreamReader(receiveStream, Encoding.Default);
 
-                            Console.WriteLine("Response stream received.");
+                            Console.WriteLine("Response stream received.      ");
                             responseString = readStream.ReadToEnd();
 
                             response.Close();
@@ -87,7 +87,7 @@ namespace AlphaS2
                         new object[]{ type , thisDate, DateTime.Now, isEmptyResponse, false},
                         }
                     });
-                    Console.WriteLine($@"new data uploaded, empty={isEmptyResponse}");
+                    Console.WriteLine($@"new data uploaded, empty={isEmptyResponse}        ");
                 }
             }
             return responseString;
@@ -95,8 +95,10 @@ namespace AlphaS2
         public static void LoadDates(List<DateTime> thisDates, char type, int timeOut = 0) {
             Console.WriteLine($@"downloading {thisDates.Count} day(s)...");
             int count = 0;
+            int cursorPos = Console.CursorTop;
             foreach (var d in thisDates) {
-                Console.WriteLine($@"{++count}/{thisDates.Count}");
+                Console.CursorTop = cursorPos;
+                Console.WriteLine($@"{++count}/{thisDates.Count}"      );
                 LoadDate(d, type, timeOut);
 
             }

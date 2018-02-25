@@ -26,5 +26,10 @@ namespace AlphaS2
         public static decimal threshold_MaxChange = 0.11m;
         public static decimal threshold_MinVolume = 3000;
 
+        public static decimal exclude_extreme_value = 0.05m;
+
+        internal static bool MATCH_IDRULE(string x) {
+            return (x.Length == 4 && !x.StartsWith("=")) || x == "=0050";
+        }
     }
 }

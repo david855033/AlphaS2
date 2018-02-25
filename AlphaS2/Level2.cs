@@ -40,8 +40,7 @@ namespace AlphaS2
 
         private decimal _Nprice_low;
         public decimal Nprice_low { get => Math.Round(_Nprice_low, 2); set => _Nprice_low = value; }
-
-     
+        
         public static List<SqlColumn> column =
          new List<SqlColumn> {
                 new SqlColumn("id","nchar(10)",false),
@@ -59,7 +58,7 @@ namespace AlphaS2
                 new SqlColumn("Nprice_low","decimal(9,2)",false)
          };
 
-        
+
 
         public static List<Level2> DataAdaptor(DataTable dataTableLevel2) {
             var result = new List<Level2>();

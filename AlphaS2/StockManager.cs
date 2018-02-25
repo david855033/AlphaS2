@@ -74,6 +74,7 @@ namespace AlphaS2
             SqlInsertData insertData = new SqlInsertData(Level1.column);
             insertData.primaryKeys.Add("id");
             insertData.primaryKeys.Add("date");
+            using (Sql sql = new Sql())
             using (var sr = new StreamReader(filePath, Encoding.Default)) {
                 string[] content = sr.ReadToEnd().Split('\n');
                 //選取股票資料行
@@ -90,6 +91,8 @@ namespace AlphaS2
                         .Select(x => x.Value.Replace(",", "").Replace("\"", "")).ToArray();
 
                     string id = dataFields[0].Trim();
+                    if (!GlobalSetting.MATCH_IDRULE(id)) continue;
+
                     string name = dataFields[1].Trim();
                     string deal = "", amount = "", price_open = "", price_close = "", nonZeroClose = "", price_high = "", price_low = "", price_ref_nextday = "", trade = "";
 
@@ -123,18 +126,17 @@ namespace AlphaS2
                             nonZeroClose = tryGetValue;
                         } else {
                             //如果last close set沒資料，用sql搜尋上一筆non zero close
-                            using (Sql sql = new Sql()) {
-                                var lastCloseQuery = sql.Select("level1",
-                                    new string[] { "top 1 price_close_nonzero" },
-                                    new string[] { $"id = '{id}'" },
-                                    "order by date desc");
-                                if (lastCloseQuery.Rows.Count > 0) {
-                                    nonZeroClose = lastCloseQuery.Rows[0][0].ToString();
-                                } else {
-                                    //如果還是沒資料，nonZeroClose設定為10
-                                    nonZeroClose = "10";
-                                }
+                            var lastCloseQuery = sql.Select("level1",
+                                new string[] { "top 1 price_close_nonzero" },
+                                new string[] { $"id = '{id}'" },
+                                "order by date desc");
+                            if (lastCloseQuery.Rows.Count > 0) {
+                                nonZeroClose = lastCloseQuery.Rows[0][0].ToString();
+                            } else {
+                                //如果還是沒資料，nonZeroClose設定為10
+                                nonZeroClose = "10";
                             }
+
                         }
                     }
                     //將close推入
@@ -156,16 +158,17 @@ namespace AlphaS2
                             trade
                         });
                 }
-                using (Sql sql = new Sql()) {
-                    var successInsert = sql.InsertUpdateRow("level1", insertData);
-                    if (successInsert) {
-                        sql.UpdateRow("fetch_log",
-                          new Dictionary<string, string>() { { "uploaded", "1" } },
-                          new string[] { $"type = '{f.type}'", $"date = '{dateString}'" });
-                    }
+
+                var successInsert = sql.InsertUpdateRow("level1", insertData);
+                if (successInsert) {
+                    sql.UpdateRow("fetch_log",
+                      new Dictionary<string, string>() { { "uploaded", "1" } },
+                      new string[] { $"type = '{f.type}'", $"date = '{dateString}'" });
                 }
+
             }
         }
+
         private static void UpdateZ(FetchLog f) {
             string filePath = f.FilePath;
             string dateString = filePath.Split('\\').Last().Split('_').Last().Split('.').First().Insert(6, "-").Insert(4, "-");
@@ -192,6 +195,8 @@ namespace AlphaS2
                         .Cast<Match>()
                         .Select(x => x.Value.Replace(",", "").Replace("\"", "")).ToArray();
                     string id = dataFields[1], divide = dataFields[divideColIndex];
+                    if (!GlobalSetting.MATCH_IDRULE(id)) { continue; }
+
                     //查詢除權息日期(大於等於dateString的最小日期) 避免颱風假等狀況
                     var dateStringQuery = sql.Select("level1",
                         new string[] { "min(date)" },
@@ -286,7 +291,7 @@ namespace AlphaS2
 
 
                         if (matchLevel1Data != null) {  //有找到level1data
-                            //判斷divide
+                                                        //判斷divide
                             if (i > 0) {  //第二筆資料之後才需要算divide
                                 if (matchLevel1Data.price_ref_nextday == 0) {
                                     //A組資料 直接採用當日divide
@@ -351,22 +356,22 @@ namespace AlphaS2
         }
         ////傳回level1內所含的ID(distinct)
         static List<string> GetIDList() {
-
-            var result = new List<string>();
-            //**
-            //return new List<string>() { "=0050", "1101", "1102", "1103", "1104", "1105" };
-            //**
-            using (Sql sql = new Sql()) {
-                var resultTable = sql.SelectDistinct("level1",
-                    new string[] { "id" }, "order by id");
-                for (int i = 0; i < resultTable.Rows.Count; i++) {
-                    result.Add(resultTable.Rows[i][0].ToString().Trim());
+            if (IDListCache == null) {
+                var result = new List<string>();
+                using (Sql sql = new Sql()) {
+                    var resultTable = sql.SelectDistinct("level1",
+                        new string[] { "id" }, "order by id");
+                    for (int i = 0; i < resultTable.Rows.Count; i++) {
+                        result.Add(resultTable.Rows[i][0].ToString().Trim());
+                    }
                 }
+                result = result.Where(x => GlobalSetting.MATCH_IDRULE(x)).ToList();
+                IDListCache = result;
             }
-            result = result.Where(x => x.Length == 4 && (!x.StartsWith("="))).ToList();
-            result.Add("=0050");
-            return result;
+            return IDListCache;
         }
+        static List<string> IDListCache;
+
         //傳回fetch_log內所含的date(dinstinct)
         static List<DateTime> GetDateListFetchLog() {
             var result = new List<DateTime>();
@@ -812,13 +817,17 @@ namespace AlphaS2
 
                     string dateCondition =
                         $"date > '{dateList[startDateIndex].ToString("yyyy-MM-dd")}'";
-                    //選取level2內資料至最新的資料
+                    //選取level2內資料至最新的資料 並且join table level3來決定要算的資料
                     DataTable dataTableLevel2 = sql.Select("level2",
-                        Level2.column.Select(x => x.name).ToArray(),
-                        new string[] { $"id='{id}'",
-                             dateCondition}
+                        Level2.column.Select(x => "level2." + x.name + " as " + x.name)
+                        .Concat(new[] { "level3.min_volume_60 as min_volume_60", "level3.max_change_abs_120 as max_change_abs_120 " })
+                        .ToArray(),
+                        $@"join level3 on level2.id = level3.id and level2.date = level3.date
+                        where level2.id = '{id}'
+                        and level2.date >  '{dateList[startDateIndex].ToString("yyyy-MM-dd")}'"
                         );
-                    List<Level2> level2Data = Level2.DataAdaptor(dataTableLevel2);
+                    List<Level2JoinLevel3> level2Data = Level2JoinLevel3.DataAdaptor(dataTableLevel2);
+
 
                     //算出level5 並更新sql 
                     List<Level5> level5DataToInsert = new List<Level5>();
@@ -827,18 +836,26 @@ namespace AlphaS2
                             id = id,
                             date = dateList[i]
                         };
-                        Level2 matchedLevel2 = level2Data.Find(x => x.date == dateList[i]);
+                        Level2JoinLevel3 matchedLevel2 = level2Data.Find(x => x.date == dateList[i]);
                         if (matchedLevel2 == null) { continue; }
-
+                        if (matchedLevel2.Min_volume_60 < GlobalSetting.threshold_MinVolume) { continue; }
+                        if (matchedLevel2.Max_change_abs_120 > GlobalSetting.threshold_MaxChange) { continue; }
+                        bool failToFindFP = false;
                         foreach (int postDay in GlobalSetting.DAYS_FP) {
-                            Level2 targetLevel2 = level2Data.Find(x => x.date == dateList[i + postDay]);
+                            Level2JoinLevel3 targetLevel2 = level2Data.Find(x => x.date == dateList[i + postDay]);
+                            if (targetLevel2 == null || targetLevel2.Max_change_abs_120 > GlobalSetting.threshold_MaxChange) {
+                                failToFindFP = true;
+                                break;
+                            }
                             string colname = $@"future_price_{postDay}";
                             //thisLevel5Data.values[colname] = matchedLevel2.Nprice_mean!=0?
                             //    targetLevel2.Nprice_mean / matchedLevel2.Nprice_mean
                             //    :1; //非log算法
-                            thisLevel5Data.values[colname] = Log(targetLevel2.Nprice_mean, matchedLevel2.Nprice_mean);
+                            thisLevel5Data.values[colname] = Log(targetLevel2.Nprice_mean, matchedLevel2.Nprice_mean) / postDay;
                         }
-                        level5DataToInsert.Add(thisLevel5Data);
+                        if (!failToFindFP) {
+                            level5DataToInsert.Add(thisLevel5Data);
+                        }
                     }
 
                     sql.InsertUpdateRow("level5", Level5.GetInsertData(level5DataToInsert));
@@ -892,8 +909,7 @@ namespace AlphaS2
 
                     DataTable level5ThisDate = sql.Select("level5",
                         new string[] { },
-                        new string[] { $@"date='{thisDate.ToString("yyyy-MM-dd")}'",
-                        "((len(id) = 4 and SUBSTRING(id,0,1) != '=') or id = '=0050')"}
+                        new string[] { $@"date='{thisDate.ToString("yyyy-MM-dd")}'" }
                         );
                     if (level5ThisDate.Rows.Count <= 1) { continue; }
 

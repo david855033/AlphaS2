@@ -51,8 +51,8 @@ namespace AlphaS2
                         newRow[i++] = (decimal)row[column];
                     }
                     dataList.Add(newRow);
-                    if (i % 100 == 0) { 
-                        Console.CursorTop= currentPosition;
+                    if (i % 100 == 0) {
+                        Console.CursorTop = currentPosition;
                         Console.WriteLine($@"Transform Data...{i}00/{queryResult.Rows.Count}         ");
                     }
                 }
@@ -73,13 +73,13 @@ namespace AlphaS2
                 int count = 0;
                 //依據各field排序 並計算partition內FP FR平均值
                 foreach (var field in fields.Select(x => x.fieldName)) {
-                    Console.CursorTop= currentPosition;
+                    Console.CursorTop = currentPosition;
                     Console.WriteLine($@"Caculating Field: {field} ({++count}/{fields.Count})                   ");
                     int index = colNames.IndexOf(field);
                     var orderedList = dataList.OrderBy(x => x[index]);
                     for (int i = 0; i < GlobalSetting.SCORE_Partition; i++) {
-                        Console.CursorTop = currentPosition+1;
-                        Console.WriteLine($@"   Partition: {i+1}/{GlobalSetting.SCORE_Partition}");
+                        Console.CursorTop = currentPosition + 1;
+                        Console.WriteLine($@"   Partition: {i + 1}/{GlobalSetting.SCORE_Partition}");
                         int startPosition = Convert.ToInt32(Math.Round(p * i));
 
                         ScoreRef newScoreData = new ScoreRef() {
@@ -95,8 +95,13 @@ namespace AlphaS2
                             .Concat(FRFields.Select(x => x.fieldName));
                         foreach (var futureField in FutureFields) {
                             int futureindex = colNames.IndexOf(futureField);
+                            int ExtrmeValueN = Convert.ToInt32(currentPartition.Count() * GlobalSetting.exclude_extreme_value);
+                            var excludeExtremeValue =
+                                currentPartition
+                                .Skip(ExtrmeValueN)
+                                .Take(currentPartition.Count() - ExtrmeValueN * 2);
                             newScoreData.values[futureField] =
-                                currentPartition.Select(x => x[futureindex]).Average();
+                                excludeExtremeValue.Select(x => x[futureindex]).Average();
                         }
                         ScoreDataToInsert.Add(newScoreData);
                     }

@@ -9,16 +9,21 @@ namespace AlphaS2
 {
     class Program
     {
-
-
         static void Main(string[] args) {
-            const bool reset = true;
-            const bool resetFetchLog = true;
-            const bool resetLevel1 = true;
-            const bool doDownload = true;
-            const bool generateRoutine = true;
-            const bool resetScoreRef = false;
-            const bool doLevel7 = false;
+            const bool reset7 = true;
+            const bool reset56 = false;
+            const bool reset234 = false;
+            const bool resetLevel1 = false;
+
+            const bool resetFetchLog = false;
+
+            const bool doDownload = false;
+            const bool generateRoutine = false;
+            const bool doLevel56 = false;
+
+            const bool resetScoreRef = true;
+
+            const bool doLevel7 = true;
 
             FileWriter.CheckDirectory();
 
@@ -26,52 +31,53 @@ namespace AlphaS2
 
             //StockManager.DropAllList();
             //StockManager.Initialize();
-
-            if (reset) {
+            if (reset7) {
                 StockManager.DropLevel7();
-                StockManager.DropLevel6();
-                StockManager.DropLevel5(); //
-                StockManager.DropLevel4(); //
-                StockManager.DropLevel3(); //
-                StockManager.DropLevel2(); //
-                if (resetLevel1) {
-                    StockManager.DropLevel1(); //
-                    StockManager.InitializeLevel1(); //
+                if (reset56) {
+                    StockManager.DropLevel6();
+                    StockManager.DropLevel5(); //
+                    if (reset234) {
+                        StockManager.DropLevel4(); //
+                        StockManager.DropLevel3(); //
+                        StockManager.DropLevel2(); //
+                        if (resetLevel1) {
+                            StockManager.DropLevel1(); //
+                            StockManager.InitializeLevel1(); //
+                        }
+                        StockManager.InitializeLevel2(); //
+                        StockManager.InitializeLevel3(); //
+                        StockManager.InitializeLevel4(); //
+                    }
+                    StockManager.InitializeLevel5(); //
+                    StockManager.InitializeLevel6(); //
                 }
-                StockManager.InitializeLevel2(); //
-                StockManager.InitializeLevel3(); //
-                StockManager.InitializeLevel4(); //
-                StockManager.InitializeLevel5(); //
-                StockManager.InitializeLevel6(); //
                 StockManager.InitializeLevel7();
             }
-          
+
             if (resetFetchLog) {
                 FetchLogManager.InitializeFetchLog(); //
             }
+
 
             if (doDownload) {
                 List<DateTime> downloadDatesA = FetchLogManager.GetDownloadDates('A'); //上市
                 List<DateTime> downloadDatesB = FetchLogManager.GetDownloadDates('B'); //上櫃
                 List<DateTime> downloadDatesZ = FetchLogManager.GetDownloadDates('Z'); //上櫃除權息
-                Task.WaitAll(new[] {
-                    Task.Factory.StartNew(() =>  {
-                        Downloader.LoadDates(downloadDatesA, 'A', 4000);
-                        Downloader.LoadDates(downloadDatesZ, 'Z', 5000);
-                    }),
-                    Task.Factory.StartNew(() =>  Downloader.LoadDates(downloadDatesB, 'B', 3000))
-                });
+                Downloader.LoadDates(downloadDatesA, 'A', 4000);
+                Downloader.LoadDates(downloadDatesB, 'B', 3000);
+                Downloader.LoadDates(downloadDatesZ, 'Z', 5000);
             }
 
-            if (generateRoutine) {  //測試時候省略
+            if (generateRoutine) {
                 StockManager.GenerateLevel1();
                 StockManager.GenerateLevel2();
                 StockManager.GenerateLevel3();
                 StockManager.GenerateLevel4();
+            }
+            if (doLevel56) {
                 StockManager.GenerateLevel5();
                 StockManager.GenerateLevel6();
             }
-
             if (resetScoreRef) {
                 ScoreManager.DropScoreRef();
                 ScoreManager.InitializeScoreRef();
