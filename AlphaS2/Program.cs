@@ -10,7 +10,7 @@ namespace AlphaS2
     class Program
     {
         static void Main(string[] args) {
-            const bool reset7 = true;
+            const bool reset7 = false;
             const bool reset56 = false;
             const bool reset234 = false;
             const bool resetLevel1 = false;
@@ -21,9 +21,11 @@ namespace AlphaS2
             const bool generateRoutine = false;
             const bool doLevel56 = false;
 
-            const bool resetScoreRef = true;
+            const bool resetScoreRef = false;
 
-            const bool doLevel7 = true;
+            const bool doLevel7 = false;
+
+            const bool tradeSim = true;
 
             FileWriter.CheckDirectory();
 
@@ -58,7 +60,6 @@ namespace AlphaS2
                 FetchLogManager.InitializeFetchLog(); //
             }
 
-
             if (doDownload) {
                 List<DateTime> downloadDatesA = FetchLogManager.GetDownloadDates('A'); //上市
                 List<DateTime> downloadDatesB = FetchLogManager.GetDownloadDates('B'); //上櫃
@@ -88,9 +89,12 @@ namespace AlphaS2
                 StockManager.GenerateLevel7();
             }
 
+            if (tradeSim) {
+                TradeSimulator.Start();
+            }
+
             Console.WriteLine("End of Program.");
             Console.ReadKey(false);
-
         }
 
         private static void InitializeDTO() {
