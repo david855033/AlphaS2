@@ -11,7 +11,11 @@ namespace AlphaS2
     {
         SqlConnection connection;
         string connectionStr = @"Server=localhost\SQLEXPRESS;database=alphas2;Trusted_Connection=true;";
+
         public Sql() {
+            if (Environment.MachineName == "DAVID2015") {
+                connectionStr = @"Server=localhost\SQLEXPRESS01;Database=master;Trusted_Connection=True;";
+            }
             CreateConnection();
         }
         private void CreateConnection() {

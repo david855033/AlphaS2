@@ -10,20 +10,20 @@ namespace AlphaS2
     class Program
     {
         static void Main(string[] args) {
-            const bool reset7 = false;
-            const bool reset56 = false;
-            const bool reset234 = false;
-            const bool resetLevel1 = false;
+            const bool reset7 = true;
+            const bool reset56 = true;
+            const bool reset234 = true;
+            const bool resetLevel1 = true;
 
-            const bool resetFetchLog = false;
+            const bool resetFetchLog = true;
 
-            const bool doDownload = false;
-            const bool generateRoutine = false;
-            const bool doLevel56 = false;
+            const bool doDownload = true;
+            const bool generateRoutine = true;
+            const bool doLevel56 = true;
 
-            const bool resetScoreRef = false;
+            const bool resetScoreRef = true;
 
-            const bool doLevel7 = false;
+            const bool doLevel7 = true;
 
             const bool tradeSim = true;
 
