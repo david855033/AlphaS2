@@ -16,6 +16,14 @@ namespace AlphaS2
     }
 
     class TradeStrategy {
-        public decimal[] weightVevtor;
+        public decimal[] WeightVevtor;
+        public double BuyThreshold;
+        public double SellThreshold;
+        public int SellThresholdDay;
+
+        public double BuyPrice;
+        public double SellPrice;
+
+
     }
 }
