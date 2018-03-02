@@ -23,7 +23,7 @@ namespace AlphaS2
 
             const bool resetScoreRef = false;
 
-            const bool doLevel7 = false;
+            const bool doLevel7 = true;
 
             const bool tradeSim = true;
 
