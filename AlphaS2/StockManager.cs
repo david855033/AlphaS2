@@ -243,7 +243,7 @@ namespace AlphaS2
                     //選取level1內資料(level2最後一天之後(不包含)=要新增的level2資料)
                     string dateCondition = startDateIndex >= 0 ?
                         $"date > '{dateList[startDateIndex].ToString("yyyy-MM-dd")}'" :
-                        $"date >= '{GlobalSetting.START_DATE.ToString("yyyy-MM-dd")}'";   //含第一筆
+                        $"date >= '{GlobalSetting.START_CAL_DATE.ToString("yyyy-MM-dd")}'";   //含第一筆
                     DataTable dataTableLevel1 = sql.Select("level1",
                         Level1.column.Select(x => x.name).ToArray(),
                         new string[] { $"id='{id}'",
@@ -452,7 +452,7 @@ namespace AlphaS2
                     const int BACK_DAYS = 60;
                     string dateCondition = startDateIndex - BACK_DAYS >= 0 ?
                         $"date > '{dateList[startDateIndex - BACK_DAYS].ToString("yyyy-MM-dd")}'" :
-                        $"date >= '{GlobalSetting.START_DATE.ToString("yyyy-MM-dd")}'";   //含第一筆
+                        $"date >= '{GlobalSetting.START_CAL_DATE.ToString("yyyy-MM-dd")}'";   //含第一筆
                     DataTable dataTableLevel2 = sql.Select("level2",
                         Level2.column.Select(x => x.name).ToArray(),
                         new string[] { $"id='{id}'",
@@ -634,7 +634,7 @@ namespace AlphaS2
                     const int BACK_DAYS = 60;
                     string dateCondition = startDateIndex - BACK_DAYS >= 0 ?
                         $"date > '{dateList[startDateIndex - BACK_DAYS].ToString("yyyy-MM-dd")}'" :
-                        $"date >= '{GlobalSetting.START_DATE.ToString("yyyy-MM-dd")}'";   //含第一筆
+                        $"date >= '{GlobalSetting.START_CAL_DATE.ToString("yyyy-MM-dd")}'";   //含第一筆
                                                                                           //選取level3內資料(起點要回推60日) 至最新的資料
                     DataTable dataTableLevel3 = sql.Select("level3",
                         Level3.column.Select(x => x.name).ToArray(),
