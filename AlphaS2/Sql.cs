@@ -261,17 +261,17 @@ namespace AlphaS2
             var emptyStringArray = new string[] { };
             return Select(table, emptyStringArray, emptyStringArray);
         }
-        public DataTable Select(string table, string[] column, string other = "") {
+        public DataTable Select(string table, IEnumerable<string> column, string other = "") {
             var emptyStringArray = new string[] { };
             return Select(table, column, emptyStringArray, other);
         }
-        public DataTable Select(string table, string[] column, string[] condition, string other = "") {
+        public DataTable Select(string table, IEnumerable<string> column, IEnumerable<string> condition, string other = "") {
             try {
                 string commandStr = $@"select " +
-                    (column.Length == 0 ? "*"
+                    (column.Count() == 0 ? "*"
                     : string.Join(",", column)) +
                     $@" FROM {table}" +
-                    (condition.Length > 0 ?
+                    (condition.Count() > 0 ?
                         $@" WHERE {String.Join(" and ", condition)}" : "") + " " +
                         other;
                 SqlCommand sqlCommand = new SqlCommand(commandStr, connection);

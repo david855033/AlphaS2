@@ -478,6 +478,7 @@ namespace AlphaS2
                             continue;
                         }
                         Level2 matchedLevel2DataYesterday = level2Data.Find(x => x.date == dateList[i - 1]);
+                        if (matchedLevel2DataYesterday==null) continue;
                         Level3 thisLevel3Data = new Level3() {
                             id = id,
                             date = dateList[i],

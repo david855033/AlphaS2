@@ -62,6 +62,7 @@
     <Compile Include="Sql.cs" />
     <Compile Include="StockManager.cs" />
     <Compile Include="TradeSimulator.cs" />
+    <Compile Include="TradeStrategy.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
