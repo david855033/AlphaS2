@@ -57,10 +57,8 @@ namespace AlphaS2
                                 .ToArray()
                             }
                         );
-
-                        dateDataList.Add(dayData);
-
                     }
+                    dateDataList.Add(dayData);
 
                 }
             }
