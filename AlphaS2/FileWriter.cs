@@ -9,7 +9,7 @@ namespace AlphaS2
     static class FileWriter
     {
         public static void CheckDirectory() {
-            foreach (var path in new[] { GlobalSetting.FOLDER_PATH, GlobalSetting.TRADE_SIM_PATH }) {
+            foreach (var path in new[] { GlobalSetting.FOLDER_PATH, GlobalSetting.TRADE_SIM_PATH, GlobalSetting.SCORE_REF_PATH }) {
                 if (!Directory.Exists(path)) {
                     Directory.CreateDirectory(path);
                     Console.WriteLine($@"create dir: {path}");

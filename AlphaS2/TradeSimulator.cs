@@ -12,7 +12,7 @@ namespace AlphaS2
         static List<DayData> dateDataList = new List<DayData>();
         public static void Start() {
             GenerateStrategy();
-            InitializeDayData(new DateTime(2017, 1, 1), new DateTime(2017, 12, 31));
+            InitializeDayData(GlobalSetting.START_SIM_DATE, GlobalSetting.END_SIM_DATE);
             string path = GlobalSetting.TRADE_SIM_PATH;
             FileWriter.CheckDirectory();
             Console.WriteLine($@"start Trade Sim @ {path}");
@@ -31,6 +31,7 @@ namespace AlphaS2
             }
             using (var sql = new Sql()) {
                 int position = Console.CursorTop;
+                //load data
                 foreach (var date in days) {
                     Console.CursorTop = position;
                     Console.WriteLine($@"doing {date}");
@@ -59,7 +60,6 @@ namespace AlphaS2
                         );
                     }
                     dateDataList.Add(dayData);
-
                 }
             }
         }

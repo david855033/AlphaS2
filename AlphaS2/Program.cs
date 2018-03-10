@@ -27,6 +27,7 @@ namespace AlphaS2
 
             const bool tradeSim = true;
 
+            const bool exportScoreRef = false;
             FileWriter.CheckDirectory();
 
             InitializeDTO();
@@ -91,6 +92,10 @@ namespace AlphaS2
 
             if (tradeSim) {
                 TradeSimulator.Start();
+            }
+
+            if (exportScoreRef) {
+                ScoreManager.ExportScoreRef();
             }
 
             Console.WriteLine("End of Program.");

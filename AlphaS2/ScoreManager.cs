@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -109,6 +110,29 @@ namespace AlphaS2
                 Console.WriteLine("Score Reference Calculation Done");
                 sql.InsertUpdateRow("scoreRef", ScoreRef.GetInsertData(ScoreDataToInsert));
             }
+
+        }
+
+        public static void ExportScoreRef() {
+            using (Sql sql = new Sql()) {
+                List<ScoreRef> scoreRefData = ScoreRef.DataAdaptor(sql.Select("scoreref"));
+                var path = GlobalSetting.SCORE_REF_PATH + $@"\scoreRef.txt";
+                var toWrite = new StringBuilder();
+                toWrite.AppendLine(String.Join(",", ScoreRef.column.Select(x=>x.name) ));
+                foreach (var row in scoreRefData) {
+                    toWrite.AppendLine(String.Join(",", new string[] {
+                        row.fieldName,
+                        row.percentileIndex.ToString(),
+                        String.Join(",",row.values.Values)
+                    }));
+                }
+                using (var sw = new StreamWriter(path)) {
+                    Console.WriteLine($@"export scoreRef: {path}");
+                    sw.Write(toWrite);
+                }
+            }
+        }
+        public static void ImportScoreRef() {
 
         }
 
