@@ -10,7 +10,7 @@ namespace AlphaS2
     class Program
     {
         static void Main(string[] args) {
-            const bool reset7 = false;
+            const bool reset7 = true;
             const bool reset56 = false;
             const bool reset234 = false;
             const bool resetLevel1 = false;
@@ -23,11 +23,15 @@ namespace AlphaS2
 
             const bool resetScoreRef = false;
 
-            const bool doLevel7 = false;
-
-            const bool tradeSim = true;
+            const bool doLevel7 = true;
 
             const bool exportScoreRef = false;
+            const bool importScoreRef = false;
+
+            const bool tradeSim = false;
+
+     
+
             FileWriter.CheckDirectory();
 
             InitializeDTO();
@@ -97,7 +101,11 @@ namespace AlphaS2
             if (exportScoreRef) {
                 ScoreManager.ExportScoreRef();
             }
-
+            if (importScoreRef) {
+                ScoreManager.DropScoreRef();
+                ScoreManager.InitializeScoreRef();
+                ScoreManager.ImportScoreRef();
+            }
             Console.WriteLine("End of Program.");
             Console.ReadKey(false);
         }

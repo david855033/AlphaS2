@@ -118,7 +118,7 @@ namespace AlphaS2
                 List<ScoreRef> scoreRefData = ScoreRef.DataAdaptor(sql.Select("scoreref"));
                 var path = GlobalSetting.SCORE_REF_PATH + $@"\scoreRef.txt";
                 var toWrite = new StringBuilder();
-                toWrite.AppendLine(String.Join(",", ScoreRef.column.Select(x=>x.name) ));
+                toWrite.AppendLine(String.Join(",", ScoreRef.column.Select(x => x.name)));
                 foreach (var row in scoreRefData) {
                     toWrite.AppendLine(String.Join(",", new string[] {
                         row.fieldName,
@@ -133,7 +133,30 @@ namespace AlphaS2
             }
         }
         public static void ImportScoreRef() {
-
+            var path = GlobalSetting.SCORE_REF_PATH + $@"\scoreRef.txt";
+            if (!File.Exists(path)) { Console.WriteLine($@"not found: {path}"); return; }
+            using (var sr = new StreamReader(path))
+            using (Sql sql = new Sql()) {
+                Console.WriteLine($@"loading {path}");
+                string data = sr.ReadToEnd();
+                string[] splitted = data.Split('\n');
+                List<ScoreRef> ScoreDataToInsert = new List<ScoreRef>();
+                string[] cols = splitted[0].Split(',');
+                for (int i = 1; i < splitted.Length; i++) {
+                    string[] splittedRow = splitted[i].Split(',');
+                    if (splittedRow.Length==1) { continue; }
+                    var newScoreRef = new ScoreRef() {
+                        fieldName = splittedRow[0],
+                        percentileIndex = Convert.ToInt32(splittedRow[1]),
+                        Threshold = Convert.ToDecimal(splittedRow[2])
+                    };
+                    for (var j = 3; j < splittedRow.Length; j++) {
+                        newScoreRef.values.Add(cols[j], Convert.ToDecimal(splittedRow[j]));
+                    }
+                    ScoreDataToInsert.Add(newScoreRef);
+                }
+                sql.InsertUpdateRow("scoreRef", ScoreRef.GetInsertData(ScoreDataToInsert));
+            }
         }
 
         //決定要計算分數的欄位
