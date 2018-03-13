@@ -22,6 +22,10 @@ namespace AlphaS2
                 var currentStrategy = strategyList[i];
                 Console.WriteLine($@">> simulating {fileName}");
                 Console.WriteLine($@">> detail: {currentStrategy.ToString()}");
+                double hold = 1;
+                foreach (var days in dateDataList) {
+
+                }
             }
         }
         private static void InitializeDayData(DateTime start, DateTime end) {
@@ -114,7 +118,7 @@ namespace AlphaS2
                 public double BuyThreshold;
                 public double SellThreshold;
                 public int SellThresholdDay;
-
+                
                 public double SetBuyPrice;
                 public double SetSellPrice;
                 public override string ToString() {
