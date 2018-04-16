@@ -12,7 +12,7 @@ namespace AlphaS2
         static void Main(string[] args) {
 
             const bool exportScoreRef = false;
-            const bool importScoreRef = true;
+            const bool importScoreRef = false;
 
             const bool reset7 = false ;
             const bool reset56 = false;
@@ -21,16 +21,16 @@ namespace AlphaS2
 
             const bool resetFetchLog = false;
 
-            const bool doDownload = false;
-            const bool generateRoutine = false;
+            const bool doDownload = false;            //** build
+            const bool generateRoutine = false;       //** build
+
             const bool doLevel56 = false;
+            const bool resetAndGenerateScoreRef = false;
 
-            const bool resetScoreRef = false;
-
-            const bool doLevel7 = true;
+            const bool doLevel7 = false;                  //** build
 
 
-            const bool tradeSim = false;
+            const bool tradeSim = true;
 
      
 
@@ -40,6 +40,14 @@ namespace AlphaS2
 
             //StockManager.DropAllList();
             //StockManager.Initialize();
+            if (exportScoreRef) {
+                ScoreManager.ExportScoreRef();
+            }
+            if (importScoreRef) {
+                ScoreManager.DropScoreRef();
+                ScoreManager.InitializeScoreRef();
+                ScoreManager.ImportScoreRef();
+            }
             if (reset7) {
                 StockManager.DropLevel7();
                 if (reset56) {
@@ -86,7 +94,7 @@ namespace AlphaS2
                 StockManager.GenerateLevel5();
                 StockManager.GenerateLevel6();
             }
-            if (resetScoreRef) {
+            if (resetAndGenerateScoreRef) {
                 ScoreManager.DropScoreRef();
                 ScoreManager.InitializeScoreRef();
                 ScoreManager.GenerateScoreTable();
@@ -100,14 +108,7 @@ namespace AlphaS2
                 TradeSimulator.Start();
             }
 
-            if (exportScoreRef) {
-                ScoreManager.ExportScoreRef();
-            }
-            if (importScoreRef) {
-                ScoreManager.DropScoreRef();
-                ScoreManager.InitializeScoreRef();
-                ScoreManager.ImportScoreRef();
-            }
+
             Console.WriteLine("End of Program.");
             Console.ReadKey(false);
         }

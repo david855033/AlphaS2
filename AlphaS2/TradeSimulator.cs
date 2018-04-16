@@ -14,7 +14,6 @@ namespace AlphaS2
             GenerateStrategy();
             InitializeDayData(GlobalSetting.START_SIM_DATE, GlobalSetting.END_SIM_DATE);
             string path = GlobalSetting.TRADE_SIM_PATH;
-            FileWriter.CheckDirectory();
             Console.WriteLine($@"start Trade Sim @ {path}");
 
             for (int i = 0; i < strategyList.Count(); i++) {
@@ -38,13 +37,18 @@ namespace AlphaS2
                 //load data
                 foreach (var date in days) {
                     Console.CursorTop = position;
-                    Console.WriteLine($@"doing {date}");
-                    DataTable dataTable = sql.Select("level7 join level2 ",
-                        new string[] { "level2.id as id", "Nprice_open", "Nprice_close", "Nprice_high", "Nprice_low" }
+                    Console.WriteLine($@"TradeSim: InitializeDayData {date}");
+                    DataTable dataTable = sql.Select("level7",
+                        new string[] { "level2.id as id",
+                            "level2.Nprice_open as Nprice_open",
+                            "level2.Nprice_close as Nprice_close",
+                            "level2.Nprice_high as Nprice_high",
+                            "level2.Nprice_low as Nprice_low" }
+                        .Concat(new string[] { "min_volume_60", "max_change_abs_120" })
                         .Concat(GlobalSetting.DAYS_FP.Select(x => $"future_price_{x}"))
                         .Concat(GlobalSetting.DAYS_FR.Select(x => $"future_rank_{x}")),
-                        $@"on level7.id = level2.id
-                        and level7.date = level2.date 
+                        $@"join level2 on level7.id = level2.id and level7.date = level2.date 
+                        join level3 on level7.id = level3.id and level7.date = level3.date 
                         where level2.date = '{date.ToString("yyyy-MM-dd")}' order by level2.id"
                         );
                     if (dataTable.Rows.Count == 0) { continue; };
@@ -52,11 +56,13 @@ namespace AlphaS2
                     foreach (DataRow row in dataTable.Rows) {
                         dayData.StockData.Add(
                             new StockData {
-                                id = (string)row["id"],
+                                id = ((string)row["id"]).Trim(),
                                 nprice_open = (decimal)row["Nprice_open"],
                                 nprice_close = (decimal)row["Nprice_close"],
                                 nprice_high = (decimal)row["Nprice_high"],
                                 nprice_low = (decimal)row["Nprice_low"],
+                                min_volume_60 = (decimal)row["min_volume_60"],
+                                max_change_abs_120 = (decimal)row["max_change_abs_120"],
                                 ScoreVector = GlobalSetting.DAYS_FP.Select(x => (decimal)row[$"future_price_{x}"])
                                 .Concat(GlobalSetting.DAYS_FR.Select(x => (decimal)row[$"future_rank_{x}"]))
                                 .ToArray()
@@ -99,7 +105,7 @@ namespace AlphaS2
         class StockData
         {
             public string id;
-            public decimal nprice_open, nprice_close, nprice_high, nprice_low;
+            public decimal nprice_open, nprice_close, nprice_high, nprice_low, min_volume_60, max_change_abs_120;
             public decimal[] ScoreVector;
             public override string ToString() {
                 return id + " " + $@"Price{nprice_open}/{nprice_close}/{nprice_high}/{nprice_low}";
@@ -118,7 +124,7 @@ namespace AlphaS2
                 public double BuyThreshold;
                 public double SellThreshold;
                 public int SellThresholdDay;
-                
+
                 public double SetBuyPrice;
                 public double SetSellPrice;
                 public override string ToString() {
