@@ -9,7 +9,9 @@ namespace AlphaS2
     class TradeSimulator
     {
         static List<TradeStrategy> strategyList;
-        static List<DayData> dateDataList = new List<DayData>();
+        static List<DayData> serialDayData = new List<DayData>();
+        static Dictionary<string, StockInformation> stockInformations = new Dictionary<string, StockInformation>();
+
         public static void Start() {
             GenerateStrategy();
             InitializeDayData(GlobalSetting.START_SIM_DATE, GlobalSetting.END_SIM_DATE);
@@ -18,12 +20,27 @@ namespace AlphaS2
 
             for (int i = 0; i < strategyList.Count(); i++) {
                 string fileName = $@"simulation {i.ToString("D6")}.txt";
-                var currentStrategy = strategyList[i];
+                var strategy = strategyList[i];
                 Console.WriteLine($@">> simulating {fileName}");
-                Console.WriteLine($@">> detail: {currentStrategy.ToString()}");
+                Console.WriteLine($@">> detail: {strategy.ToString()}");
                 double hold = 1;
-                foreach (var days in dateDataList) {
+                var simulation = new TradeSimulation(strategy, serialDayData.First().date, serialDayData.Last().date);
+                foreach (var day in serialDayData) {
 
+                    foreach (var stock in day.StockData) {
+                        double weightScore = 0;
+                        for (int j = 0; j < stock.ScoreVector.Length; j++) {
+                            weightScore += (double)stock.ScoreVector[j] * (double)strategy.WeightVevtor[j];
+                        }
+                        stock.WeightedScore = weightScore;
+                    }
+
+                    var ToBuy = day.StockData.Where(x => x.WeightedScore >= strategy.BuyThreshold).ToList();
+                    ToBuy.Sort((a, b) => b.WeightedScore.CompareTo(a.WeightedScore));
+                    
+                    if (simulation.HoldingStocks.Count() < strategy.MaxDivide) {
+                        
+                    }
                 }
             }
         }
@@ -54,9 +71,10 @@ namespace AlphaS2
                     if (dataTable.Rows.Count == 0) { continue; };
                     var dayData = new DayData() { date = date };
                     foreach (DataRow row in dataTable.Rows) {
+                        string id = ((string)row["id"]).Trim();
                         dayData.StockData.Add(
                             new StockData {
-                                id = ((string)row["id"]).Trim(),
+                                id = id,
                                 nprice_open = (decimal)row["Nprice_open"],
                                 nprice_close = (decimal)row["Nprice_close"],
                                 nprice_high = (decimal)row["Nprice_high"],
@@ -68,87 +86,107 @@ namespace AlphaS2
                                 .ToArray()
                             }
                         );
+                        if (stockInformations.ContainsKey(id)) {
+                            stockInformations[id].ExpendDate(date);
+                        } else {
+                            stockInformations.Add(id, new StockInformation(date));
+                        }
                     }
-                    dateDataList.Add(dayData);
+                    serialDayData.Add(dayData);
                 }
             }
         }
         private static void GenerateStrategy() {
             strategyList = new List<TradeStrategy>();
             strategyList.Add(new TradeStrategy {
-                WeightVevtor = new decimal[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-                BuyThreshold = 100,
-                SellThreshold = 100,
+                WeightVevtor = new decimal[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 },
+                MaxDivide = 10,
+                MaxBuyInDay = 3,
+                BuyThreshold = 0,
+                SellThreshold = 0,
                 SellThresholdDay = 5,
                 SetBuyPrice = 1,
                 SetSellPrice = 1
             });
         }
 
+    }
 
-        class TradeStrategy
-        {
-            public decimal[] WeightVevtor;
-            public float BuyThreshold;
-            public float SellThreshold;
-            public float SellThresholdDay;
-            public float SetBuyPrice;
-            public float SetSellPrice;
+    //contains list of stockData
+    class DayData
+    {
+        public DateTime date;
+        public List<StockData> StockData = new List<StockData>();
+    }
+
+    class StockData
+    {
+        public string id;
+        public decimal nprice_open, nprice_close, nprice_high, nprice_low, min_volume_60, max_change_abs_120;
+        public decimal[] ScoreVector;
+        public double WeightedScore;
+        public override string ToString() {
+            return id + " " + $@"Price{nprice_open}/{nprice_close}/{nprice_high}/{nprice_low}";
         }
-
-        class DayData
-        {
-            public DateTime date;
-            public List<StockData> StockData = new List<StockData>();
+    }
+    class StockInformation
+    {
+        public DateTime StartDateInPeroid;
+        public DateTime EndDateInPeroid;
+        public StockInformation(DateTime setDate) {
+            this.StartDateInPeroid = setDate;
+            this.EndDateInPeroid = setDate;
         }
-
-        class StockData
-        {
-            public string id;
-            public decimal nprice_open, nprice_close, nprice_high, nprice_low, min_volume_60, max_change_abs_120;
-            public decimal[] ScoreVector;
-            public override string ToString() {
-                return id + " " + $@"Price{nprice_open}/{nprice_close}/{nprice_high}/{nprice_low}";
-            }
-
-            class StockInformation
-            {
-                public string id;
-                public decimal StartDateInPeroid;
-                public decimal EndDateInPeroid;
-            }
-
-            public class TradeStrategy
-            {
-                public decimal[] WeightVevtor;
-                public double BuyThreshold;
-                public double SellThreshold;
-                public int SellThresholdDay;
-
-                public double SetBuyPrice;
-                public double SetSellPrice;
-                public override string ToString() {
-                    return $@"WeightVevtor: {string.Join(",", this.WeightVevtor)}, B-S Threshold: {BuyThreshold}/{SellThreshold}, Sell Day {SellThresholdDay}, B-S Price: {SetBuyPrice}/{SetSellPrice}";
-                }
-            }
-
-            class TradeRecord
-            {
-                public DateTime BuyDate;
-                public DateTime SellDate;
-                public double BuyPrice;
-                public double SellPrice;
-            }
-
-            class TradeSimulation
-            {
-                public DateTime StartSimulationDate;
-                public DateTime EndSimulationDate;
-                public TradeStrategy TradeStrategy;
-                public List<TradeRecord> HoldingStocks;
-                public List<TradeRecord> FinishedStocks;
-                public double fund;
+        internal void ExpendDate(DateTime date) {
+            if (date > this.EndDateInPeroid) {
+                this.EndDateInPeroid = date;
             }
         }
     }
+
+    public class TradeStrategy
+    {
+        public decimal[] WeightVevtor;
+        public int MaxDivide;
+        public int MaxBuyInDay;
+        public double BuyThreshold;
+        public double SellThreshold;
+        public int SellThresholdDay;
+        public double SetBuyPrice;
+        public double SetSellPrice;
+        public override string ToString() {
+            return $@"WeightVevtor: {string.Join(",", this.WeightVevtor)}, B-S Threshold: {BuyThreshold}/{SellThreshold}, Sell Day {SellThresholdDay}, B-S Price: {SetBuyPrice}/{SetSellPrice}";
+        }
+    }
+
+    class TradeRecord
+    {
+        public DateTime BuyDate;
+        public DateTime SellDate;
+        public double BuyPrice;
+        public double SellPrice;
+    }
+
+    class TradeSimulation
+    {
+        public DateTime StartSimulationDate;
+        public DateTime EndSimulationDate;
+        public TradeStrategy TradeStrategy;
+        public List<TradeRecord> HoldingStocks;
+        public List<TradeRecord> FinishedStocks;
+        public double fund;
+
+
+
+        public TradeSimulation(TradeStrategy currentStrategy, DateTime start, DateTime end) {
+            this.TradeStrategy = currentStrategy;
+            this.fund = 1;
+            this.HoldingStocks = new List<TradeRecord>();
+            this.FinishedStocks = new List<TradeRecord>();
+            this.StartSimulationDate = start;
+            this.EndSimulationDate = end;
+        }
+    }
+
 }
+
