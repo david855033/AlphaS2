@@ -177,8 +177,9 @@ namespace AlphaS2
             using (Sql sql = new Sql()) {
                 string[] content = sr.ReadToEnd().Split('\n');
                 //選取股票資料行
+                Regex RE_StockRow = new Regex("^=?\"[0-9]+年[0-9]+月[0-9]+日\",");
                 string[] stockData = content
-                    .Where(x => x.StartsWith("="))
+                    .Where(x => RE_StockRow.IsMatch(x))
                     .Select(x => x.TrimEnd(new[] { ',', '\r' })).ToArray();
                 string title = content
                     .Where(x => x.Contains("權值+息值"))

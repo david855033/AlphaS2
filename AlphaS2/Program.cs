@@ -14,23 +14,23 @@ namespace AlphaS2
             const bool exportScoreRef = false;
             const bool importScoreRef = false;
 
-            const bool reset7 = false ;
-            const bool reset56 = false;
-            const bool reset234 = false;
-            const bool resetLevel1 = false;
+            const bool reset7 = true;
+            const bool reset56 = true;
+            const bool reset234 = true;
+            const bool resetLevel1 = true;
 
-            const bool resetFetchLog = false;
+            const bool resetFetchLog = true;
 
-            const bool doDownload = false;            //** build
-            const bool generateRoutine = false;       //** build
+            const bool doDownload = true;            //** build env
+            const bool generateRoutine = true;       //** build env
 
-            const bool doLevel56 = false;
-            const bool resetAndGenerateScoreRef = false;
+            const bool doLevel56 = true;
+            const bool resetAndGenerateScoreRef = true;
 
-            const bool doLevel7 = false;                  //** build
+            const bool doLevel7 = true;                  //** build env
 
 
-            const bool tradeSim = true;
+            const bool tradeSim = false;
 
      
 

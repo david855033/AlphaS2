@@ -25,9 +25,11 @@ namespace AlphaS2
                 Console.WriteLine($@">> detail: {strategy.ToString()}");
                 double hold = 1;
                 var simulation = new TradeSimulation(strategy, serialDayData.First().date, serialDayData.Last().date);
-                foreach (var day in serialDayData) {
 
-                    foreach (var stock in day.StockData) {
+
+                for (int d = 0; d < serialDayData.Count();d++){
+                    var currentDay = serialDayData[d];
+                    foreach (var stock in currentDay.StockData) {
                         double weightScore = 0;
                         for (int j = 0; j < stock.ScoreVector.Length; j++) {
                             weightScore += (double)stock.ScoreVector[j] * (double)strategy.WeightVevtor[j];
@@ -35,11 +37,15 @@ namespace AlphaS2
                         stock.WeightedScore = weightScore;
                     }
 
-                    var ToBuy = day.StockData.Where(x => x.WeightedScore >= strategy.BuyThreshold).ToList();
+                    var ToBuy = currentDay.StockData.Where(x => x.WeightedScore >= strategy.BuyThreshold).ToList();
                     ToBuy.Sort((a, b) => b.WeightedScore.CompareTo(a.WeightedScore));
                     
                     if (simulation.HoldingStocks.Count() < strategy.MaxDivide) {
-                        
+                        var BuyCount = strategy.MaxDivide - simulation.HoldingStocks.Count();
+                        for (int j = 0; j < BuyCount && j < ToBuy.Count(); j++) {
+                            double setBuyPrice = (double)ToBuy[j].nprice_close * strategy.SetBuyPrice;
+                            
+                        }
                     }
                 }
             }
