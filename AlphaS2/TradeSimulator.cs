@@ -17,7 +17,7 @@ namespace AlphaS2
             InitializeDayData(GlobalSetting.START_SIM_DATE, GlobalSetting.END_SIM_DATE);
             string path = GlobalSetting.TRADE_SIM_PATH;
             Console.WriteLine($@"start Trade Sim @ {path}");
-
+            const bool DEBUG = true;
 
 
             for (int i = 0; i < strategyList.Count(); i++) {
@@ -28,12 +28,14 @@ namespace AlphaS2
                 double fund = 1;
                 var simulation = new TradeSimulation(strategy, serialDayData.First().date, serialDayData.Last().date);
 
+                if (DEBUG) Console.WriteLine("策略編號#" + i);
                 //初始化下單之清單(日與日之間傳遞)
                 List<BuyOrder> buyOrderList = new List<BuyOrder>();
                 List<SellOrder> sellOrderList = new List<SellOrder>();
                 for (int d = 0; d < serialDayData.Count(); d++) {
                     //計算權重
                     var currentDay = serialDayData[d];
+                    if (DEBUG) Console.WriteLine(">>日期" + currentDay.date.ToShortDateString());
                     foreach (var stock in currentDay.StockData) {
                         double weightScore = 0;
                         for (int j = 0; j < stock.ScoreVector.Length; j++) {
@@ -43,22 +45,57 @@ namespace AlphaS2
                     }
 
                     //判斷昨日下單是否成功交易
-                    //TODO
-
+                    if (DEBUG) Console.WriteLine("今日單--買進:" + buyOrderList.Count() + "賣出:" + sellOrderList.Count());
+                    var invest = fund / (simulation.TradeStrategy.MaxDivide - simulation.HoldingStocks.Count());
+                    foreach (var buyOrder in buyOrderList) {
+                        if (DEBUG) Console.WriteLine("ID:" + buyOrder.stock.id + " 掛價:" + buyOrder.setBuyPrice.ToString("F2"));
+                        var matchStock = currentDay.StockData.FirstOrDefault(x => x.id == buyOrder.stock.id);
+                        if (matchStock != null) {
+                            if (DEBUG) Console.WriteLine("- 當日開盤:" + matchStock.nprice_open + " 最低:" + matchStock.nprice_low);
+                            if (buyOrder.setBuyPrice >= (double)matchStock.nprice_open) {
+                                if (DEBUG) Console.WriteLine("- 開盤價買進, 投入" + invest.ToString("F4"));
+                                simulation.HoldingStocks.Add(
+                                    new TradeRecord() {
+                                        BuyDate = currentDay.date,
+                                        BuyPrice = (double)matchStock.nprice_open,
+                                        fund = invest
+                                    });
+                            } else if (buyOrder.setBuyPrice >= (double)matchStock.nprice_low) {
+                                if (DEBUG) Console.WriteLine("- 設定價格買進, 投入" + invest.ToString("F4"));
+                                simulation.HoldingStocks.Add(
+                                   new TradeRecord() {
+                                       BuyDate = currentDay.date,
+                                       BuyPrice = buyOrder.setBuyPrice,
+                                       fund = invest
+                                   });
+                            } else {
+                                if (DEBUG) Console.WriteLine("- 無成交");
+                            }
+                        } else {
+                            if (DEBUG) Console.WriteLine("- 搜尋不到該股");
+                        }
+                    }
+                    foreach (var sellOrder in sellOrderList) {
+                        //TODO
+                    }
+                    buyOrderList.Clear();
 
                     //若還有空間，排序可購買清單
                     if (simulation.HoldingStocks.Count() < strategy.MaxDivide) {
                         var ToBuy = currentDay.StockData.Where(x => x.WeightedScore >= strategy.BuyThreshold).ToList();
                         ToBuy.Sort((a, b) => b.WeightedScore.CompareTo(a.WeightedScore));
 
-                        var BuyCount = strategy.MaxDivide - simulation.HoldingStocks.Count();
+                        var BuyCount = Math.Min(strategy.MaxBuyInDay, strategy.MaxDivide - simulation.HoldingStocks.Count());
                         for (int j = 0; j < BuyCount && j < ToBuy.Count(); j++) {
                             double setBuyPrice = (double)ToBuy[j].nprice_close * strategy.SetBuyPrice;
-                            //TODO
+                            buyOrderList.Add(new BuyOrder { stock = ToBuy[j], setBuyPrice = setBuyPrice });
+                            if (DEBUG) Console.WriteLine("新增買單:" + ToBuy[j].id + " 價格:" + setBuyPrice.ToString("F2") + " 加權分數:" + ToBuy[j].WeightedScore);
+
                         }
                     }
 
                     //檢查是否有需賣出目標
+
                     //TODO
                 }
             }
@@ -182,6 +219,7 @@ namespace AlphaS2
     {
         public DateTime BuyDate;
         public DateTime SellDate;
+        public double fund;
         public double BuyPrice;
         public double SellPrice;
     }
