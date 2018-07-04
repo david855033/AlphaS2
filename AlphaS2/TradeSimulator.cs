@@ -35,7 +35,7 @@ namespace AlphaS2
                 for (int d = 0; d < serialDayData.Count(); d++) {
                     //計算權重
                     var currentDay = serialDayData[d];
-                    if (DEBUG) Console.WriteLine(">>日期" + currentDay.date.ToShortDateString());
+                    if (DEBUG) Console.WriteLine("\r\n>>>>>>>>日期" + currentDay.date.ToShortDateString() + " 資金:"+fund);
                     foreach (var stock in currentDay.StockData) {
                         double weightScore = 0;
                         for (int j = 0; j < stock.ScoreVector.Length; j++) {
@@ -45,10 +45,12 @@ namespace AlphaS2
                     }
 
                     //判斷昨日下單是否成功交易
-                    if (DEBUG) Console.WriteLine("今日單--買進:" + buyOrderList.Count() + "賣出:" + sellOrderList.Count());
+                    if (DEBUG) Console.WriteLine("###判斷昨日下單是否成功交易###");
+                    if (DEBUG) Console.WriteLine("今日已掛--買進:" + buyOrderList.Count() + "賣出:" + sellOrderList.Count());
+                    //處理買單
                     var invest = fund / (simulation.TradeStrategy.MaxDivide - simulation.HoldingStocks.Count());
                     foreach (var buyOrder in buyOrderList) {
-                        if (DEBUG) Console.WriteLine("ID:" + buyOrder.stock.id + " 掛價:" + buyOrder.setBuyPrice.ToString("F2"));
+                        if (DEBUG) Console.WriteLine("ID:" + buyOrder.stock.id + " 掛買:" + buyOrder.setBuyPrice.ToString("F2"));
                         var matchStock = currentDay.StockData.FirstOrDefault(x => x.id == buyOrder.stock.id);
                         if (matchStock != null) {
                             if (DEBUG) Console.WriteLine("- 當日開盤:" + matchStock.nprice_open + " 最低:" + matchStock.nprice_low);
@@ -56,18 +58,22 @@ namespace AlphaS2
                                 if (DEBUG) Console.WriteLine("- 開盤價買進, 投入" + invest.ToString("F4"));
                                 simulation.HoldingStocks.Add(
                                     new TradeRecord() {
+                                        stock = matchStock,
                                         BuyDate = currentDay.date,
                                         BuyPrice = (double)matchStock.nprice_open,
-                                        fund = invest
+                                        invest = invest
                                     });
+                                fund -= invest;
                             } else if (buyOrder.setBuyPrice >= (double)matchStock.nprice_low) {
                                 if (DEBUG) Console.WriteLine("- 設定價格買進, 投入" + invest.ToString("F4"));
                                 simulation.HoldingStocks.Add(
                                    new TradeRecord() {
+                                       stock = matchStock,
                                        BuyDate = currentDay.date,
                                        BuyPrice = buyOrder.setBuyPrice,
-                                       fund = invest
+                                       invest = invest
                                    });
+                                fund -= invest;
                             } else {
                                 if (DEBUG) Console.WriteLine("- 無成交");
                             }
@@ -75,12 +81,45 @@ namespace AlphaS2
                             if (DEBUG) Console.WriteLine("- 搜尋不到該股");
                         }
                     }
-                    foreach (var sellOrder in sellOrderList) {
-                        //TODO
-                    }
                     buyOrderList.Clear();
 
+                    //處理賣單
+                    foreach (var sellOrder in sellOrderList) {
+                        if (DEBUG) Console.WriteLine("ID:" + sellOrder.stock.id + " 掛賣:" + sellOrder.setSellPrice.ToString("F2"));
+                        var matchStock = currentDay.StockData.FirstOrDefault(x => x.id == sellOrder.stock.id);
+                        if (matchStock != null) {
+                            if (DEBUG) Console.WriteLine("- 當日開盤:" + matchStock.nprice_open + " 最高:" + matchStock.nprice_high);
+                            if (sellOrder.setSellPrice <= (double)matchStock.nprice_open) {
+                                var sellPrice = (double)matchStock.nprice_open;
+                                var tradeRecord = simulation.HoldingStocks.Find(x => x.stock.id == matchStock.id);
+                                var getFund = tradeRecord.getFund(sellPrice);
+                                if (DEBUG) Console.WriteLine("- 開盤價賣出, 回收資金" + getFund.ToString("F4"));
+                                fund += getFund;
+                                tradeRecord.SellDate = currentDay.date;
+                                tradeRecord.SellPrice = sellPrice;
+                                simulation.FinishedStocks.Add(tradeRecord);
+                                simulation.HoldingStocks.Remove(tradeRecord);
+                            } else if (sellOrder.setSellPrice <= (double)matchStock.nprice_high) {
+                                var sellPrice = sellOrder.setSellPrice;
+                                var tradeRecord = simulation.HoldingStocks.Find(x => x.stock.id == matchStock.id);
+                                var getFund = tradeRecord.getFund(sellPrice);
+                                if (DEBUG) Console.WriteLine("- 設定價格賣出, 回收資金" + getFund.ToString("F4"));
+                                fund += getFund;
+                                tradeRecord.SellDate = currentDay.date;
+                                tradeRecord.SellPrice = sellPrice;
+                                simulation.FinishedStocks.Add(tradeRecord);
+                                simulation.HoldingStocks.Remove(tradeRecord);
+                            } else {
+                                if (DEBUG) Console.WriteLine("- 無成交");
+                            }
+                        } else {
+                            //todo找不到->強制結算
+                        }
+                    }
+                    sellOrderList.Clear();
+
                     //若還有空間，排序可購買清單
+                    if (DEBUG) Console.WriteLine("###判斷是否要掛明日買單###");
                     if (simulation.HoldingStocks.Count() < strategy.MaxDivide) {
                         var ToBuy = currentDay.StockData.Where(x => x.WeightedScore >= strategy.BuyThreshold).ToList();
                         ToBuy.Sort((a, b) => b.WeightedScore.CompareTo(a.WeightedScore));
@@ -90,13 +129,25 @@ namespace AlphaS2
                             double setBuyPrice = (double)ToBuy[j].nprice_close * strategy.SetBuyPrice;
                             buyOrderList.Add(new BuyOrder { stock = ToBuy[j], setBuyPrice = setBuyPrice });
                             if (DEBUG) Console.WriteLine("新增買單:" + ToBuy[j].id + " 價格:" + setBuyPrice.ToString("F2") + " 加權分數:" + ToBuy[j].WeightedScore);
-
                         }
                     }
 
                     //檢查是否有需賣出目標
-
-                    //TODO
+                    if (DEBUG) Console.WriteLine("###判斷是否要掛明日賣單###");
+                    simulation.HoldingStocks.ForEach(trade => {
+                        var stock = trade.stock;
+                        if (DEBUG) Console.WriteLine("檢查是否需賣出:" + stock.id + " 加權分數:" + stock.WeightedScore + " 累計天數:" + stock.underSellThresholdDay);
+                        if (stock.WeightedScore < strategy.SellThreshold) {
+                            stock.underSellThresholdDay++;
+                            if (stock.underSellThresholdDay >= strategy.SellThresholdDay) {
+                                double setSellPrice = (double)stock.nprice_close * strategy.SetSellPrice;
+                                sellOrderList.Add(new SellOrder { stock = stock, setSellPrice = setSellPrice });
+                                if (DEBUG) Console.WriteLine("新增賣單:" + stock.id + " 價格:" + setSellPrice.ToString("F2") + " 加權分數:" + stock.WeightedScore);
+                            }
+                        } else {
+                            stock.underSellThresholdDay = 0;
+                        }
+                    });
                 }
             }
         }
@@ -158,9 +209,9 @@ namespace AlphaS2
                 WeightVevtor = new decimal[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 },
                 MaxDivide = 10,
                 MaxBuyInDay = 3,
-                BuyThreshold = 0,
-                SellThreshold = 0,
-                SellThresholdDay = 5,
+                BuyThreshold = 170,
+                SellThreshold = 170,
+                SellThresholdDay = 2,
                 SetBuyPrice = 1,
                 SetSellPrice = 1
             });
@@ -181,6 +232,7 @@ namespace AlphaS2
         public decimal nprice_open, nprice_close, nprice_high, nprice_low, min_volume_60, max_change_abs_120;
         public decimal[] ScoreVector;
         public double WeightedScore;
+        public int underSellThresholdDay = 0;
         public override string ToString() {
             return id + " " + $@"Price{nprice_open}/{nprice_close}/{nprice_high}/{nprice_low}";
         }
@@ -217,11 +269,15 @@ namespace AlphaS2
 
     class TradeRecord
     {
+        public StockData stock;
         public DateTime BuyDate;
         public DateTime SellDate;
-        public double fund;
+        public double invest;
         public double BuyPrice;
         public double SellPrice;
+        public double getFund(double sellPrice) {
+            return invest * sellPrice / BuyPrice;
+        }
     }
 
     class TradeSimulation
