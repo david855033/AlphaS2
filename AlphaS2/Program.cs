@@ -21,27 +21,25 @@ namespace AlphaS2
 
             const bool resetFetchLog = false;
 
-            const bool doDownload = false;            //** build env
-            const bool generateRoutine = false;       //** build env
+            const bool doDownload = true;            //** build env
+            const bool generateRoutine = true;       //** build env (level 1-4)
 
             const bool doLevel56 = false;
             const bool resetAndGenerateScoreRef = false;
 
-            const bool doLevel7 = false;                  //** build env
+            const bool doLevel7 = true;                  //** build env
 
 
-            const bool tradeSim = true;
+            const bool tradeSim = false;
 
-    
+
             FileWriter.CheckDirectory();
 
             InitializeDTO();
 
             //StockManager.DropAllList();
             //StockManager.Initialize();
-            if (exportScoreRef) {
-                ScoreManager.ExportScoreRef();
-            }
+
             if (importScoreRef) {
                 ScoreManager.DropScoreRef();
                 ScoreManager.InitializeScoreRef();
@@ -97,6 +95,10 @@ namespace AlphaS2
                 ScoreManager.DropScoreRef();
                 ScoreManager.InitializeScoreRef();
                 ScoreManager.GenerateScoreTable();
+            }
+
+            if (exportScoreRef) {
+                ScoreManager.ExportScoreRef();
             }
 
             if (doLevel7) {
