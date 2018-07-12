@@ -18,20 +18,19 @@ namespace AlphaS2
             const bool reset56 = false;
             const bool reset234 = false;
             const bool resetLevel1 = false;
-
             const bool resetFetchLog = false;
 
-            const bool doDownload = true;            //** build env
-            const bool generateRoutine = true;       //** build env (level 1-4)
+            const bool doDownload = false;            //** build env
+            const bool generateRoutine = false;       //** build env (level 1-4)
 
             const bool doLevel56 = false;
             const bool resetAndGenerateScoreRef = false;
 
-            const bool doLevel7 = true;                  //** build env
+            const bool doLevel7 = false;                  //** build env
 
 
-            const bool tradeSim = false;
-
+            const bool tradeSim = true;
+            const bool makeAdvice = false;
 
             FileWriter.CheckDirectory();
 
@@ -89,7 +88,7 @@ namespace AlphaS2
             }
             if (doLevel56) {
                 StockManager.GenerateLevel5();
-                StockManager.GenerateLevel6();
+                //StockManager.GenerateLevel6();
             }
             if (resetAndGenerateScoreRef) {
                 ScoreManager.DropScoreRef();
@@ -109,6 +108,9 @@ namespace AlphaS2
                 TradeSimulator.Start();
             }
 
+            if (makeAdvice) {
+                Advicer.MakeAdvice();
+            }
 
             Console.WriteLine("End of Program.");
             Console.ReadKey(false);

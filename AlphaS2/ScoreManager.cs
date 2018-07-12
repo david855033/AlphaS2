@@ -25,19 +25,16 @@ namespace AlphaS2
             Console.WriteLine($@"Generating Score Reference Table");
             List<ScoreField> fields = GenerateFeatureField();
             List<ScoreField> FPFields = GenerateFuturePriceField();
-            List<ScoreField> FRFields = GenerateFutureRankField();
 
             Console.WriteLine($@"Fields to calculate: {fields.Count}, loading data from SQL server....");
             using (Sql sql = new Sql()) {
                 DataTable queryResult =
-                    sql.Select("level6",
+                    sql.Select("level5",
                     FPFields.Select(x => x.fieldName)
-                    .Concat(FRFields.Select(x => x.fieldName))
                     .Concat(fields.Select(x => x.fieldName))
                     .ToArray(),
-                    $@"join level3 on level6.id = level3.id and level6.date = level3.date
-                        join level4 on level6.id = level4.id and level6.date = level4.date
-                        join level5 on level6.id = level5.id and level6.date = level5.date
+                    $@"join level3 on level5.id = level3.id and level5.date = level3.date
+                        join level4 on level5.id = level4.id and level5.date = level4.date
                         where min_volume_60 >= {GlobalSetting.threshold_MinVolume}
                         and max_change_abs_120 <= {GlobalSetting.threshold_MaxChange}");
 
@@ -92,8 +89,7 @@ namespace AlphaS2
                         var currentPartition = orderedList
                             .Skip(startPosition)
                             .Take(p_int);
-                        var FutureFields = FPFields.Select(x => x.fieldName)
-                            .Concat(FRFields.Select(x => x.fieldName));
+                        var FutureFields = FPFields.Select(x => x.fieldName);
                         foreach (var futureField in FutureFields) {
                             int futureindex = colNames.IndexOf(futureField);
                             int ExtrmeValueN = Convert.ToInt32(currentPartition.Count() * GlobalSetting.exclude_extreme_value);

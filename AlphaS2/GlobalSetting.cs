@@ -12,7 +12,7 @@ namespace AlphaS2
         public static readonly string TRADE_SIM_PATH = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + @"\alphas2data\tradeSim";
         public static readonly DateTime START_DATE = new DateTime(2007, 8, 1);     //download start date(2007,8,1)
         public static readonly DateTime START_CAL_DATE = new DateTime(2007, 8, 1);   //level1 start date
-        public static readonly DateTime END_DATE = DateTime.Now;  // 
+        public static readonly DateTime END_DATE = DateTime.Now;  // DateTime.Now;
 
         public static readonly DateTime START_SIM_DATE = new DateTime(2010, 1, 1); // TESTING
         public static readonly DateTime END_SIM_DATE = new DateTime(2017, 12, 31);  // TESTING
@@ -24,12 +24,12 @@ namespace AlphaS2
         public static int[] DAYS_KD = new int[] { 5, 10, 20, 40, 60 };
         public static int[] DAYS_RSI = new int[] { 10, 20, 60 };
         public static int[] DAYS_DMI = new int[] { 10, 20, 60 };
-        public static int[] DAYS_FP = new int[] { 5, 10, 20, 30, 40, 50, 60, 70, 80 };
-        public static int[] DAYS_FR = new int[] { 20, 40, 60, 80 };
+        public static int[] DAYS_FP = new int[] { 5, 10, 15, 20, 30, 40, 60, 80 };
+        public static int[] DAYS_FR = new int[] { };
 
         public static int SCORE_Partition = 20;
 
-        public static decimal threshold_MaxChange = 0.11m;
+        public static decimal threshold_MaxChange = 11m;  //單位為%
         public static decimal threshold_MinVolume = 3000;
 
         public static decimal exclude_extreme_value = 0.05m;

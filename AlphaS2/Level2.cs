@@ -49,7 +49,7 @@ namespace AlphaS2
                 new SqlColumn("volume_per_trade","decimal(9,2)",false),
                 new SqlColumn("divide","decimal(9,4)",false),
                 new SqlColumn("fix","decimal(9,4)",false),
-                new SqlColumn("change_abs","decimal(9,4)",false),
+                new SqlColumn("change_abs","decimal(9,2)",false),
                 new SqlColumn("price_mean","decimal(9,2)",false),
                 new SqlColumn("Nprice_mean","decimal(9,2)",false),
                 new SqlColumn("Nprice_open","decimal(9,2)",false),
@@ -83,9 +83,10 @@ namespace AlphaS2
         }
 
         public static SqlInsertData GetInsertData(List<Level2> level2DataToInsert) {
-            SqlInsertData result = new SqlInsertData();
-            result.ColumnList = Level2.column;
-            result.primaryKeys = new List<string>() { "id", "date" };
+            SqlInsertData result = new SqlInsertData {
+                ColumnList = Level2.column,
+                primaryKeys = new List<string>() { "id", "date" }
+            };
             foreach (var data in level2DataToInsert) {
                 result.DataList.Add(new object[] {
                     data.id, data.date,data.volume,data.volume_per_trade, data.Divide, data.Fix, data.ChangeAbs, data.Price_mean,

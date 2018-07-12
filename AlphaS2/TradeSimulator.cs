@@ -61,7 +61,9 @@ namespace AlphaS2
                     foreach (var buyOrder in buyOrderList) {
                         if (DEBUG) Console.WriteLine("ID:" + buyOrder.stock.id + " 掛買:" + buyOrder.setBuyPrice.ToString("F2"));
                         var matchStock = currentDay.StockData.FirstOrDefault(x => x.id == buyOrder.stock.id);
-                        if (matchStock != null) {
+                        if (matchStock != null
+                            && matchStock.min_volume_60 > GlobalSetting.threshold_MinVolume
+                            && matchStock.max_change_abs_120 < GlobalSetting.threshold_MaxChange) {
                             if (DEBUG) Console.WriteLine("- 當日開盤:" + matchStock.nprice_open + " 最低:" + matchStock.nprice_low);
                             if (buyOrder.setBuyPrice >= (double)matchStock.nprice_open) {
                                 if (DEBUG) Console.WriteLine("- 開盤價買進, 投入" + invest.ToString("F4"));
@@ -122,8 +124,8 @@ namespace AlphaS2
                                 if (DEBUG) Console.WriteLine("- 無成交");
                             }
                         } else {
-                            var sellPrice = sellOrder.closeOfSetDate;
                             var tradeRecord = simulation.HoldingStocks.Find(x => x.stock.id == sellOrder.stock.id);
+                            var sellPrice = sellOrder.closeOfSetDate;
                             var getFund = SellDiscount(tradeRecord.GetFund(sellPrice));
                             if (DEBUG) Console.WriteLine("- 該股資料中斷, 以前一日收盤回收資金" + getFund.ToString("F4"));
                             fund += getFund;
@@ -138,7 +140,11 @@ namespace AlphaS2
                     //若還有空間，排序可購買清單
                     if (DEBUG) Console.WriteLine("###判斷是否要掛明日買單###");
                     if (simulation.HoldingStocks.Count() < strategy.MaxDivide) {
-                        var ToBuy = currentDay.StockData.Where(x => x.WeightedScore >= strategy.BuyThreshold).ToList();
+                        var ToBuy = currentDay.StockData
+                            .Where(x => x.WeightedScore >= strategy.BuyThreshold
+                            && x.min_volume_60 > GlobalSetting.threshold_MinVolume
+                            && x.max_change_abs_120 < GlobalSetting.threshold_MaxChange
+                            && !simulation.HoldingStocks.Exists(y => y.stock.id == x.id)).ToList();
                         ToBuy.Sort((a, b) => b.WeightedScore.CompareTo(a.WeightedScore));
 
                         var BuyCount = Math.Min(strategy.MaxBuyInDay, strategy.MaxDivide - simulation.HoldingStocks.Count());
@@ -169,11 +175,13 @@ namespace AlphaS2
                                     if (DEBUG) Console.WriteLine("新增賣單:" + stockData.id + " 價格:" + setSellPrice.ToString("F2") + " 加權分數:" + stockData.WeightedScore);
                                 }
                             } else {
-                                stockData.underSellThresholdDay = 0;
+                                trade.stock.underSellThresholdDay = 0;
                             }
                         } else {
                             var stockDatas = serialDayData
-                                .Select(x => Tuple.Create(x.StockData.Find(y => y.id == trade.stock.id), x.date)).ToList();
+                                .Select(x => Tuple.Create(x.StockData.Find(y => y.id == trade.stock.id
+                                && y.nprice_close > 0
+                                && y.max_change_abs_120 < GlobalSetting.threshold_MaxChange), x.date)).ToList();
                             stockDatas = stockDatas.FindAll(x => x.Item1 != null && x.Item2 <= currentDay.date);
                             stockDatas.Sort((b, a) => a.Item2.CompareTo(b.Item2));
                             var lastClose = (double)stockDatas.First().Item1.nprice_close;
@@ -198,7 +206,9 @@ namespace AlphaS2
                 if (DEBUG) Console.WriteLine($@"結算 simulation {i.ToString("D6")}");
                 foreach (var holdingTradeRecord in simulation.HoldingStocks) {
                     var stockDatas = serialDayData
-                        .Select(x => Tuple.Create(x.StockData.Find(y => y.id == holdingTradeRecord.stock.id), x.date)).ToList();
+                        .Select(x => Tuple.Create(x.StockData.Find(y => y.id == holdingTradeRecord.stock.id
+                        && y.nprice_close > 0
+                        && y.max_change_abs_120 < GlobalSetting.threshold_MaxChange), x.date)).ToList();
                     stockDatas = stockDatas.FindAll(x => x.Item1 != null);
                     stockDatas.Sort((b, a) => a.Item2.CompareTo(b.Item2));
                     var lastClose = (double)stockDatas.First().Item1.nprice_close;
@@ -237,8 +247,7 @@ namespace AlphaS2
                             "level2.Nprice_high as Nprice_high",
                             "level2.Nprice_low as Nprice_low" }
                         .Concat(new string[] { "min_volume_60", "max_change_abs_120" })
-                        .Concat(GlobalSetting.DAYS_FP.Select(x => $"future_price_{x}"))
-                        .Concat(GlobalSetting.DAYS_FR.Select(x => $"future_rank_{x}")),
+                        .Concat(GlobalSetting.DAYS_FP.Select(x => $"future_price_{x}")),
                         $@"join level2 on level7.id = level2.id and level7.date = level2.date 
                         join level3 on level7.id = level3.id and level7.date = level3.date 
                         where level2.date = '{date.ToString("yyyy-MM-dd")}' order by level2.id"
@@ -255,14 +264,12 @@ namespace AlphaS2
                             nprice_low = (decimal)row["Nprice_low"],
                             min_volume_60 = (decimal)row["min_volume_60"],
                             max_change_abs_120 = (decimal)row["max_change_abs_120"],
-                            ScoreVector = GlobalSetting.DAYS_FP.Select(x => (decimal)row[$"future_price_{x}"])
-                                .Concat(GlobalSetting.DAYS_FR.Select(x => (decimal)row[$"future_rank_{x}"]))
-                                .ToArray()
+                            ScoreVector = GlobalSetting.DAYS_FP.Select(x => (decimal)row[$"future_price_{x}"]).ToArray()
                         };
-                        if (newData.min_volume_60 < GlobalSetting.threshold_MinVolume ||
-                            newData.max_change_abs_120 > GlobalSetting.threshold_MaxChange) {
-                            continue;
-                        }
+                        //if (newData.min_volume_60 < GlobalSetting.threshold_MinVolume ||
+                        //    newData.max_change_abs_120 > GlobalSetting.threshold_MaxChange) {
+                        //    continue;
+                        //}
                         dayData.StockData.Add(newData);
                         if (stockInformations.ContainsKey(id)) {
                             stockInformations[id].ExpendDate(date);
@@ -276,14 +283,15 @@ namespace AlphaS2
         }
         private static void GenerateStrategy() {
             strategyList = new List<TradeStrategy>();
-            for (int i = 0; i <= 0; i++) {
-                for (int j = 0; j <= 0; j++) {
+            int rangei = 1, rangej = 1;
+            for (int i = -rangei; i <= rangei; i++) {
+                for (int j = -rangej; j <= rangej; j++) {
                     strategyList.Add(new TradeStrategy {
-                        WeightVevtor = new decimal[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 },
-                        MaxDivide = 20,
+                        WeightVevtor = new decimal[] { 1, 1, 1, 1, 1, 1, 1, 1 },
+                        MaxDivide = 12,
                         MaxBuyInDay = 3,
-                        BuyThreshold = 115,
-                        SellThreshold = 40,
+                        BuyThreshold = 60,
+                        SellThreshold = 15,
                         SellThresholdDay = 8,
                         SetBuyPrice = 1.025,
                         SetSellPrice = 1
@@ -367,6 +375,7 @@ namespace AlphaS2
         public double BuyPrice;
         public double SellPrice;
         public double GetFund(double sellPrice) {
+            if (sellPrice == 0) sellPrice = this.BuyPrice; //如果賣價為零(error) 則用該股買價賣出
             return invest * sellPrice / BuyPrice;
         }
         public static string Title() {

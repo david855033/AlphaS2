@@ -251,13 +251,14 @@ namespace AlphaS2
                              dateCondition}
                         );
                     List<Level1> level1Data = Level1.DataAdaptor(dataTableLevel1);
-                    //選取level2最後一筆fix (預設為1)
+                    //選取level2最後一筆fix及Nprice_close (預設為1)
                     var lastFixQuery = sql.Select("level2",
-                        new string[] { "top 1 fix" },
+                        new string[] { "top 1 fix, Nprice_close" },
                          new string[] { $"id='{id}'" }, "order by date desc");
-                    Decimal lastFix = 1;
+                    Decimal lastFix = 1, lastNprice_close = 10;
                     if (lastFixQuery.Rows.Count > 0) {
                         lastFix = Convert.ToDecimal(lastFixQuery.Rows[0][0]);
+                        lastNprice_close = Convert.ToDecimal(lastFixQuery.Rows[0][1]);
                     }
                     //選取level1最後一筆price_close_non zero / lastRefNextDay
                     var lastLevel1Query = sql.Select("level1",
@@ -338,11 +339,14 @@ namespace AlphaS2
 
                             //計算change (預設值100，如果沒有對應資料會留預設值)
                             if (i > 0) {
-                                thisLevel2Data.ChangeAbs = Math.Abs(matchLevel1Data.price_close_nonzero / lastCloseNonZero - 1);
+                                thisLevel2Data.ChangeAbs = Math.Abs(
+                                    thisLevel2Data.Nprice_close / lastNprice_close - 1)
+                                    * 100;
                             }
 
                             //將資料存到last data
                             lastCloseNonZero = matchLevel1Data.price_close_nonzero;
+                            lastNprice_close = thisLevel2Data.Nprice_close;
                             lastFix = thisLevel2Data.Fix;
                             lastRefNextDay = matchLevel1Data.price_ref_nextday;
                         }
@@ -479,7 +483,7 @@ namespace AlphaS2
                             continue;
                         }
                         Level2 matchedLevel2DataYesterday = level2Data.Find(x => x.date == dateList[i - 1]);
-                        if (matchedLevel2DataYesterday==null) continue;
+                        if (matchedLevel2DataYesterday == null) continue;
                         Level3 thisLevel3Data = new Level3() {
                             id = id,
                             date = dateList[i],
@@ -637,7 +641,7 @@ namespace AlphaS2
                     string dateCondition = startDateIndex - BACK_DAYS >= 0 ?
                         $"date > '{dateList[startDateIndex - BACK_DAYS].ToString("yyyy-MM-dd")}'" :
                         $"date >= '{GlobalSetting.START_CAL_DATE.ToString("yyyy-MM-dd")}'";   //含第一筆
-                                                                                          //選取level3內資料(起點要回推60日) 至最新的資料
+                                                                                              //選取level3內資料(起點要回推60日) 至最新的資料
                     DataTable dataTableLevel3 = sql.Select("level3",
                         Level3.column.Select(x => x.name).ToArray(),
                         new string[] { $"id='{id}'",

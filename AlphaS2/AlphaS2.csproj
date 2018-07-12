@@ -42,6 +42,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Advicer.cs" />
     <Compile Include="FetchLog.cs" />
     <Compile Include="FetchLogManager.cs" />
     <Compile Include="FileWriter.cs" />
