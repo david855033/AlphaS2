@@ -9,7 +9,7 @@ namespace AlphaS2
 {
     class Sql : IDisposable
     {
-        SqlConnection connection;
+        public SqlConnection connection;
         string connectionStr = @"Server=localhost\SQLEXPRESS;database=alphas2;Trusted_Connection=true;";
 
         public Sql() {
@@ -31,6 +31,8 @@ namespace AlphaS2
         void Connection_InfoMessage(object sender, SqlInfoMessageEventArgs e) {
             infoMessage = e.Message;
         }
+
+        
 
         //如果表單不存在則建立
         public void CreateTable(string table, IEnumerable<SqlColumn> column) {

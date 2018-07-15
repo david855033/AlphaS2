@@ -209,7 +209,7 @@ namespace AlphaS2
                     var successInsert = sql.UpdateRow("level1",
                         new Dictionary<string, string>() { { "divide", divide } },
                         new string[] { $"id = '{id}'", $"date = '{newDateString}'" });
-                    if (successInsert) {
+                    if (true) { //
                         sql.UpdateRow("fetch_log",
                             new Dictionary<string, string>() { { "uploaded", "1" } },
                             new string[] { $"type = '{f.type}'", $"date = '{dateString}'" });

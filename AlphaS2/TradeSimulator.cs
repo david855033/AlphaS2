@@ -72,7 +72,8 @@ namespace AlphaS2
                                         stock = matchStock,
                                         BuyDate = currentDay.date,
                                         BuyPrice = (double)matchStock.nprice_open,
-                                        invest = BuyDiscount(invest)
+                                        invest = BuyDiscount(invest),
+                                        buyWeight = buyOrder.buyWeight
                                     });
                                 fund -= invest;
                             } else if (buyOrder.setBuyPrice >= (double)matchStock.nprice_low) {
@@ -82,7 +83,8 @@ namespace AlphaS2
                                        stock = matchStock,
                                        BuyDate = currentDay.date,
                                        BuyPrice = buyOrder.setBuyPrice,
-                                       invest = BuyDiscount(invest)
+                                       invest = BuyDiscount(invest),
+                                       buyWeight = buyOrder.buyWeight
                                    });
                                 fund -= invest;
                             } else {
@@ -108,6 +110,7 @@ namespace AlphaS2
                                 fund += getFund;
                                 tradeRecord.SellDate = currentDay.date;
                                 tradeRecord.SellPrice = sellPrice;
+                                tradeRecord.sellWeight = sellOrder.sellWeight;
                                 simulation.FinishedStocks.Add(tradeRecord);
                                 simulation.HoldingStocks.Remove(tradeRecord);
                             } else if (sellOrder.setSellPrice <= (double)matchStock.nprice_high) {
@@ -118,6 +121,7 @@ namespace AlphaS2
                                 fund += getFund;
                                 tradeRecord.SellDate = currentDay.date;
                                 tradeRecord.SellPrice = sellPrice;
+                                tradeRecord.sellWeight = sellOrder.sellWeight;
                                 simulation.FinishedStocks.Add(tradeRecord);
                                 simulation.HoldingStocks.Remove(tradeRecord);
                             } else {
@@ -131,6 +135,7 @@ namespace AlphaS2
                             fund += getFund;
                             tradeRecord.SellDate = sellOrder.setDate;
                             tradeRecord.SellPrice = sellPrice;
+                            tradeRecord.sellWeight = sellOrder.sellWeight;
                             simulation.FinishedStocks.Add(tradeRecord);
                             simulation.HoldingStocks.Remove(tradeRecord);
                         }
@@ -150,7 +155,7 @@ namespace AlphaS2
                         var BuyCount = Math.Min(strategy.MaxBuyInDay, strategy.MaxDivide - simulation.HoldingStocks.Count());
                         for (int j = 0; j < BuyCount && j < ToBuy.Count(); j++) {
                             double setBuyPrice = (double)ToBuy[j].nprice_close * strategy.SetBuyPrice;
-                            buyOrderList.Add(new BuyOrder { stock = ToBuy[j], setBuyPrice = setBuyPrice });
+                            buyOrderList.Add(new BuyOrder { stock = ToBuy[j], setBuyPrice = setBuyPrice, buyWeight = (decimal)ToBuy[j].WeightedScore });
                             if (DEBUG) Console.WriteLine("新增買單:" + ToBuy[j].id + " 價格:" + setBuyPrice.ToString("F2") + " 加權分數:" + ToBuy[j].WeightedScore);
                         }
                     }
@@ -170,6 +175,7 @@ namespace AlphaS2
                                         stock = stockData,
                                         setSellPrice = setSellPrice,
                                         closeOfSetDate = (double)stockData.nprice_close,
+                                        sellWeight = (decimal)stockData.WeightedScore,
                                         setDate = currentDay.date
                                     });
                                     if (DEBUG) Console.WriteLine("新增賣單:" + stockData.id + " 價格:" + setSellPrice.ToString("F2") + " 加權分數:" + stockData.WeightedScore);
@@ -283,15 +289,15 @@ namespace AlphaS2
         }
         private static void GenerateStrategy() {
             strategyList = new List<TradeStrategy>();
-            int rangei = 1, rangej = 1;
+            int rangei = 20, rangej = 20;
             for (int i = -rangei; i <= rangei; i++) {
                 for (int j = -rangej; j <= rangej; j++) {
                     strategyList.Add(new TradeStrategy {
                         WeightVevtor = new decimal[] { 1, 1, 1, 1, 1, 1, 1, 1 },
                         MaxDivide = 12,
                         MaxBuyInDay = 3,
-                        BuyThreshold = 60,
-                        SellThreshold = 15,
+                        BuyThreshold = 60 + j * 2,
+                        SellThreshold = 15 + i * 2,
                         SellThresholdDay = 8,
                         SetBuyPrice = 1.025,
                         SetSellPrice = 1
@@ -370,7 +376,9 @@ namespace AlphaS2
     {
         public StockData stock;
         public DateTime BuyDate;
+        public decimal buyWeight;
         public DateTime SellDate;
+        public decimal sellWeight;
         public double invest;
         public double BuyPrice;
         public double SellPrice;
@@ -381,7 +389,9 @@ namespace AlphaS2
         public static string Title() {
             return "Stock" + "\t" +
                 "BuyDate" + "\t" +
+                "buyWeight" + "\t" +
                 "SellDate" + "\t" +
+                "sellWeight" + "\t" +
                 "BuyPrice" + "\t" +
                 "SellPrice" + "\t" +
                 "HoldDays" + "\t" +
@@ -390,7 +400,9 @@ namespace AlphaS2
         public override string ToString() {
             return stock.id + "\t" +
                 BuyDate.ToShortDateString() + "\t" +
+                buyWeight.ToString("F2") + "\t" +
                 SellDate.ToShortDateString() + "\t" +
+                sellWeight.ToString("F2") + "\t" +
                 BuyPrice.ToString("F2") + "\t" +
                 SellPrice.ToString("F2") + "\t" +
                 SellDate.Subtract(BuyDate).Days + "\t" +
@@ -458,11 +470,13 @@ namespace AlphaS2
     class BuyOrder
     {
         public double setBuyPrice;
+        public decimal buyWeight;
         public StockData stock;
     }
     class SellOrder
     {
         public DateTime setDate;
+        public decimal sellWeight;
         public double closeOfSetDate;
         public double setSellPrice;
         public StockData stock;
