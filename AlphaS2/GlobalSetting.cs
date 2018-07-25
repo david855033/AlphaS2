@@ -12,8 +12,8 @@ namespace AlphaS2
         public static readonly string REPORT_PATH = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + @"\alphas2data\report";
         public static readonly string TRADE_SIM_PATH = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + @"\alphas2data\tradeSim";
 
-        public static readonly DateTime START_DATE = new DateTime(2007, 8, 1);     //download start date(2007,8,1)
-        public static readonly DateTime START_CAL_DATE = new DateTime(2007, 8, 1);   //level1 start date
+        public static readonly DateTime START_DATE = new DateTime(2017, 8, 1);     //download start date(2007,8,1)
+        public static readonly DateTime START_CAL_DATE = new DateTime(2017, 8, 1);   //level1 start date
         public static readonly DateTime END_DATE = new DateTime(2007, 7, 15);  // DateTime.Now;
 
         public static readonly DateTime START_SIM_DATE = new DateTime(2016, 1, 1); // TESTING
