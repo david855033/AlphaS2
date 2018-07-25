@@ -119,6 +119,7 @@ namespace AlphaS2
                     toWrite.AppendLine(String.Join(",", new string[] {
                         row.fieldName,
                         row.percentileIndex.ToString(),
+                        row.Threshold.ToString(),
                         String.Join(",",row.values.Values)
                     }));
                 }

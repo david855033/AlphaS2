@@ -12,7 +12,7 @@ namespace AlphaS2
         static void Main(string[] args) {
 
             //**danger
-            const bool exportScoreRef = false;
+            const bool exportScoreRef = true;
             const bool importScoreRef = false;
 
             const bool reset7 = false;
@@ -24,17 +24,17 @@ namespace AlphaS2
             //
 
 
-            const bool doDownload = true;            //** build env
-            const bool generateRoutine = true;       //** build env (level 1-4)
+            const bool doDownload = false;            //** build env
+            const bool generateRoutine = false;       //** build env (level 1-4)
 
             const bool doLevel56 = false;  //for calculate score
 
 
-            const bool doLevel7 = true;                  //** build env
+            const bool doLevel7 = false;                  //** build env
 
 
             const bool tradeSim = false;
-            const bool makeAdvice = true;    //** build env
+            const bool makeAdvice = false;    //** build env
 
             FileWriter.CheckDirectory();
 
