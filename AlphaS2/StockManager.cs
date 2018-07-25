@@ -338,7 +338,7 @@ namespace AlphaS2
                             }
 
                             //計算change (預設值100，如果沒有對應資料會留預設值)
-                            if (i > 0) {
+                            if (i > 0 && lastNprice_close > 0) {
                                 thisLevel2Data.ChangeAbs = Math.Abs(
                                     thisLevel2Data.Nprice_close / lastNprice_close - 1)
                                     * 100;

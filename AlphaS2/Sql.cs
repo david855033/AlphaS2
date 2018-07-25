@@ -15,6 +15,8 @@ namespace AlphaS2
         public Sql() {
             if (Environment.MachineName == "DAVID2015") {
                 connectionStr = @"Server=localhost\SQLEXPRESS01;Database=master;Trusted_Connection=True;";
+            }else if (Environment.MachineName == "DAVID2017MSI") {
+                connectionStr = @"Server=localhost\SQLEXPRESS;Database=alphas2;Trusted_Connection=True;";
             }
             CreateConnection();
         }
