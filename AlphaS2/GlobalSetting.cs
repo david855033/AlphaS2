@@ -14,7 +14,7 @@ namespace AlphaS2
 
         public static readonly DateTime START_DATE = new DateTime(2017, 8, 1);     //download start date(2007,8,1)
         public static readonly DateTime START_CAL_DATE = new DateTime(2017, 8, 1);   //level1 start date
-        public static readonly DateTime END_DATE = new DateTime(2007, 7, 15);  // DateTime.Now;
+        public static readonly DateTime END_DATE = DateTime.Now;  // DateTime.Now;
 
         public static readonly DateTime START_SIM_DATE = new DateTime(2016, 1, 1); // TESTING
         public static readonly DateTime END_SIM_DATE = new DateTime(2017, 12, 31);  // TESTING

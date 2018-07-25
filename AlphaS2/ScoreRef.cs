@@ -28,10 +28,6 @@ namespace AlphaS2
             foreach (var d in GlobalSetting.DAYS_FP) {
                 newColumns.Add(new SqlColumn($@"future_price_{d}", "decimal(9,2)", false));
             }
-            foreach (var d in GlobalSetting.DAYS_FR) {
-                newColumns.Add(new SqlColumn($@"future_rank_{d}", "decimal(9,2)", false));
-            }
-
             ScoreRef.column = newColumns;
         }
 
