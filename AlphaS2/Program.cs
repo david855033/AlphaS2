@@ -12,8 +12,8 @@ namespace AlphaS2
         static void Main(string[] args) {
 
             //**danger
-            const bool exportScoreRef = true;
-            const bool importScoreRef = false;
+            const bool exportScoreRef = false;
+            const bool importScoreRef = true;
 
             const bool reset7 = false;
             const bool reset56 = false;

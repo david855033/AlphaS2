@@ -138,9 +138,9 @@ namespace AlphaS2
                 string data = sr.ReadToEnd();
                 string[] splitted = data.Split('\n');
                 List<ScoreRef> ScoreDataToInsert = new List<ScoreRef>();
-                string[] cols = splitted[0].Split(',');
+                string[] cols = splitted[0].Trim().Split(',');
                 for (int i = 1; i < splitted.Length; i++) {
-                    string[] splittedRow = splitted[i].Split(',');
+                    string[] splittedRow = splitted[i].Trim().Split(',');
                     if (splittedRow.Length==1) { continue; }
                     var newScoreRef = new ScoreRef() {
                         fieldName = splittedRow[0],
